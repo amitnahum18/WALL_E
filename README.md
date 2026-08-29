@@ -1,147 +1,157 @@
-# סימולטור אייפון
+# iPhone Simulator
 
-מסך בית של אייפון שרץ בדפדפן בתוך מסגרת מכשיר. בלי Node, בלי npm, בלי build.
+An iPhone home screen that runs in the browser inside a device frame.
+No Node, no npm, no build step.
 
-## הפעלה
+## Running it
 
-לחיצה כפולה על `index.html`.
+Double-click `index.html`.
 
-אם תוסיף בהמשך `fetch`, ES modules או Service Worker — הדפדפן חוסם אותם ב-`file://`,
-ואז תריץ שרת מקומי:
+If you later add `fetch`, ES modules or a Service Worker, the browser blocks
+them on `file://` — then run a local server instead:
 
 ```powershell
 .\serve.ps1          # http://localhost:5173
 ```
 
-## מה עובד במכשיר
+## What works on the device
 
-**מסך הבית** — שני עמודים, 32 אפליקציות, דוק, נקודות עמוד, פס Search.
-החלקה בין עמודים בגרירת עכבר עם snap. לחיצה על אייקון פותחת את האפליקציה
-באנימציית הזום של iOS. חזרה: החלקה מהקצה התחתון, `Esc`, או כפתור Home.
-אייקון Clock עם מחוגים חיים ואייקון Calendar עם התאריך של היום.
+**The home screen** — two pages, 32 apps, a dock, page dots, a Search pill.
+Swipe between pages by dragging with the mouse, with snapping. Tapping an icon
+opens the app with the iOS zoom animation. To go back: swipe from the bottom
+edge, press `Esc`, or use the Home button. The Clock icon has live hands and
+the Calendar icon shows today's date.
 
-### אפליקציות עובדות
+### Working apps
 
-| אפליקציה | מה עובד |
+| App | What works |
 |---|---|
-| **Calculator** | מחשבון מלא — שרשור פעולות, `%`, `+/−`, AC/C, הדגשת אופרטור, וגם מקלדת פיזית |
-| **Messages** | רשימת שיחות → שיחה עם בועות, שליחה אמיתית, נקודות הקלדה ותשובה חוזרת. נשמר בין רענונים |
-| **Settings** | רשימות מקובצות, מתגים עובדים, ניווט לעומק (Wi-Fi, General, About). Display & Brightness מחליף ערכה באמת |
-| **Weather** | מזג אוויר נוכחי, רצועת שעות אופקית, תחזית 10 ימים עם פסי טמפרטורה, אריחי פירוט |
-| **Photos** | ספרייה בגריד 3 טורים, מציג תמונה מלא עם רצועת תצוגה מקדימה, For You, אלבומים, חיפוש |
-| **Clock** | ארבע לשוניות. שעון עולמי עם זמנים אמיתיים, סטופר עובד עם הקפות, טיימר עם ספירה לאחור |
-| **Notes** | רשימה → עורך אמיתי. כל מה שתכתוב נשמר ב-localStorage |
-| **Phone** | מועדפים, שיחות אחרונות, אנשי קשר, ומקלדת חיוג עובדת |
-| **Mail** | תיבת דואר עם סימוני נקרא/לא-נקרא → מסך הודעה עם גוף מלא וסרגל פעולות |
-| **Calendar** | תצוגת חודש עם נקודות אירועים, ניווט בין חודשים, ולוח הזמנים של היום הנבחר |
-| **Music** | ספרייה, מיני-נגן, ומסך Now Playing עם סרגל התקדמות שבאמת רץ |
-| **Maps** | מפת רחובות שנוצרת פרוצדורלית, מסלול, סיכת יעד, וגיליון תחתון עם ETA |
-| **Loop** | רשת חברתית — סטוריז, פיד, לייקים ושמירות שנשמרים |
-| **WALL·E** | מילת זימון שרצה on-device, מיקרופון, ותמלול. ראה סעיף משלו למטה |
+| **Calculator** | A full calculator — chained operations, `%`, `+/−`, AC/C, operator highlighting, and the physical keyboard too |
+| **Messages** | Conversation list → a thread with bubbles, real sending, typing dots and a reply coming back. Survives refreshes |
+| **Settings** | Grouped lists, working switches, navigation in depth (Wi-Fi, General, About). Display & Brightness really does change the theme |
+| **Weather** | Current conditions, a horizontal hourly strip, a 10-day forecast with temperature bars, detail tiles |
+| **Photos** | A 3-column grid library, a full viewer with a filmstrip, For You, albums, search |
+| **Clock** | Four tabs. World clock with real times, a working stopwatch with laps, a counting-down timer |
+| **Notes** | List → a real editor. Everything you type is kept in localStorage |
+| **Phone** | Favourites, recents, contacts, and a working keypad |
+| **Mail** | A mailbox with read/unread marks → a message screen with the full body and an action bar |
+| **Calendar** | Month view with event dots, navigation between months, and the schedule for the selected day |
+| **Music** | Library, mini player, and a Now Playing screen with a progress bar that actually runs |
+| **Maps** | A procedurally generated street map, a route, a destination pin, and a bottom sheet with an ETA |
+| **Loop** | A social network — stories, feed, likes and saves that persist |
+| **WALL·E** | An on-device wake word, the microphone, and transcription. It has its own section below |
 
-14 אפליקציות עובדות. השאר נפתחות למסך ממלא-מקום עד שתכתוב להן קובץ ב-`screens/`.
+14 working apps. The rest open a placeholder screen until you write them a file
+in `screens/`.
 
-**ניווט:** מסכים נדחפים ונשלפים עם אנימציית ה-slide של iOS, כולל גרירה
-מהקצה השמאלי כדי לחזור אחורה.
+**Navigation:** screens push and pop with the iOS slide animation, including
+dragging from the left edge to go back.
 
-## WALL·E — מילת זימון, מיקרופון, תמלול
+## WALL·E — wake word, microphone, transcript
 
-השלב הראשון של העוזר הקולי. הצינור נעצר בטקסט על המסך: אין Screen Capture,
-אין Agent ואין LLM.
+Stage one of the voice assistant. The pipeline stops at text on screen: no
+screen capture, no agent, no LLM.
 
 ```
-"בלה בלה..."        → שום דבר. Porcupine מחפש רק את השם, on-device, ב-WebAssembly.
-"Hi WALL·E"         → 🔴 ביפ, והמיקרופון עובר לתמלול.
-"what's on tomorrow?" → STT → הטקסט נכנס ליומן התמלולים.
+"blah blah..."        → nothing. Porcupine listens only for the name,
+                        on-device, in WebAssembly.
+"Hi WALL·E"           → 🔴 a beep, and the microphone moves to transcription.
+"what's on tomorrow?" → STT → the text lands in the transcript log.
 ```
 
-התמלול באנגלית (`en-US`) כברירת מחדל. עברית ואנגלית בריטית זמינות ב-Settings.
+Transcription is English (`en-US`) by default. Hebrew and British English are
+available in Settings.
 
-**חובה להריץ דרך שרת.** `getUserMedia` חסום ב-`file://`:
+**It has to be served.** `getUserMedia` is blocked on `file://`:
 
 ```powershell
 .\serve.ps1        # http://localhost:5173
 ```
 
-### הפעלה
+### Getting it running
 
-1. פתח את אפליקציית **WALL·E** ולחץ על הכדור — זה מצב Push-to-talk, שעובד מיד
-   בלי שום מפתח. התמלול מופיע חי ואז נשמר.
-2. למילת זימון צריך **AccessKey** חינמי מ-`console.picovoice.ai`. הדבק אותו
-   ב-Settings שבתוך האפליקציה (נשמר ב-localStorage בלבד, לא בקוד), והדלק את
-   המתג **Wake word**.
-3. ברירת המחדל היא המילה המובנית `Computer`. ל-"Hi WALL·E" אמיתי: אמן את המילה
-   בקונסולה של Picovoice בפלטפורמת **Web (WASM)**, שים את ה-`.ppn` ב-
-   `app/voice/models/hi-walle.ppn`, ובחר **Custom** ברשימת ה-KEYWORD.
+1. Open the **WALL·E** app and tap the orb — that is push-to-talk, and it
+   works immediately with no key at all. The transcript appears live and is
+   then saved.
+2. The wake word needs a free **AccessKey** from `console.picovoice.ai`. Paste
+   it into Settings inside the app (it is kept in localStorage only, never in
+   the source) and turn on the **Wake word** switch.
+3. The default is the built-in word `Computer`. For a real "Hi WALL·E": train
+   the word in the Picovoice console for the **Web (WASM)** platform, drop the
+   `.ppn` at `app/voice/models/hi-walle.ppn`, and pick **Custom** in the
+   KEYWORD list.
 
-מודל השפה `porcupine_params.pv` נמשך אוטומטית מ-jsDelivr. אם תשים עותק מקומי ב-
-`app/voice/models/` — הוא יועדף.
+The language model `porcupine_params.pv` is pulled from jsDelivr automatically.
+Put a local copy in `app/voice/models/` and it will be preferred.
 
-### כוונון
+### Tuning
 
-מסך האפליקציה סופר זיהויים, false-positives, זמן זימון→הקלטה וזמן תמלול.
-מחוון ה-Sensitivity ב-Settings נכנס לתוקף בהדלקה הבאה של המתג. הדרך למדוד:
-עשר אמירות של מילת הזימון מול חמש דקות של שיחה רגילה ברקע.
+The app screen counts detections, false positives, the wake→listening delay and
+the transcription time. The Sensitivity slider in Settings takes effect the next
+time you turn the switch on. How to measure: ten utterances of the wake word
+against five minutes of ordinary conversation in the background.
 
-### מגבלות
+### Limits
 
-* התמלול הוא Web Speech API — **Chrome בלבד**, והאודיו שאחרי הזימון עובר בשרתי
-  Google. לפני הזימון שום אודיו לא יוצא מהמכשיר.
-* בגרסה המאוגדת (`dist/simulator.html`) סקריפטי ה-CDN של Picovoice מושמטים,
-  ולכן שם נשאר רק Push-to-talk.
-* להחלפת מנוע התמלול (למשל Whisper) יש לגעת רק ב-`app/voice/stt.js`.
+* Transcription is the Web Speech API — **Chrome only**, and the audio after
+  the wake word passes through Google's servers. Before the wake word, no
+  audio leaves the machine.
+* In the bundled build (`dist/simulator.html`) the Picovoice CDN scripts are
+  stripped, so only push-to-talk survives there.
+* To swap the transcription engine (for Whisper, say) only
+  `app/voice/stt.js` has to change.
 
-## גרסה לשיתוף
+## A version to share
 
 ```bash
-node build.mjs        # -> dist/simulator.html, קובץ יחיד
+node build.mjs        # -> dist/simulator.html, a single file
 ```
 
-מאגד את כל הקבצים לקובץ HTML אחד שאפשר להעלות לכל מקום.
-מסך הטלפון נשאר ב-iframe (הוא צריך viewport משלו), אבל נטען מ-`srcdoc`.
+Bundles every file into one HTML file you can upload anywhere. The phone screen
+stays in an iframe (it needs a viewport of its own) but is fed from `srcdoc`.
 
-## סרגל הכלים
+## The toolbar
 
-| פקד | מה הוא עושה |
+| Control | What it does |
 |---|---|
-| **מכשיר** | iPhone 15 Pro / Pro Max / 13 mini / SE, Pixel 8, Galaxy S24 / A54, iPad mini |
-| **זום** | התאמה אוטומטית לגובה החלון, או אחוז קבוע |
-| **סיבוב** | מעבר לרוחב. קיצור: `Ctrl+←` / `Ctrl+→` |
-| **ערכה** | מצב כהה/בהיר — עובר גם לאפליקציה |
-| **רענון** | טעינה מחדש. קיצור: `R` |
-| **Live** | רענון אוטומטי בכל חזרה לחלון הדפדפן, עם שמירת מיקום הגלילה |
-| **שורת הנתיב** | טוען כל קובץ או כתובת בתוך המכשיר |
+| **Device** | iPhone 15 Pro / Pro Max / 13 mini / SE, Pixel 8, Galaxy S24 / A54, iPad mini |
+| **Zoom** | Fit to the window height, or a fixed percentage |
+| **Rotate** | Switch to landscape. Shortcut: `Ctrl+←` / `Ctrl+→` |
+| **Theme** | Dark/light — it reaches the app too |
+| **Reload** | Load again. Shortcut: `R` |
+| **Live** | Auto-reload every time you come back to the browser window, keeping the scroll position |
+| **Path box** | Loads any file or URL inside the device |
 
-## מבנה
+## Layout
 
 ```
-index.html            מעטפת הסימולטור
+index.html            the simulator shell
 simulator/
-  devices.js          רשימת המכשירים
-  frame.css           עיצוב המסגרת
-  sim.js              הלוגיקה
-app/                  ★ כאן אתה כותב
-  index.html          שלד מסך הבית
-  apps.js             ★ קטלוג האפליקציות והאייקונים
-  main.js             springboard: בנייה, החלקה, פתיחת אפליקציה
-  style.css           מסך הבית
-  ui.js / ui.css      ★ ערכת ה-UI של iOS + מחסנית הניווט
-  screens.css         עיצוב פרטני לכל אפליקציה
-  screens/            ★ קובץ אחד לכל אפליקציה
+  devices.js          the device list
+  frame.css           the frame styling
+  sim.js              the logic
+app/                  ★ this is where you write
+  index.html          the home screen skeleton
+  apps.js             ★ the app catalog and the icons
+  main.js             springboard: building, swiping, opening an app
+  style.css           the home screen
+  ui.js / ui.css      ★ the iOS UI kit + the navigation stack
+  screens.css         per-app styling
+  screens/            ★ one file per app
     calculator.js  messages.js  settings.js  weather.js
     photos.js      clock.js     notes.js     phone.js
-  voice/              צינור הקול של WALL·E
-    wake.js           מילת הזימון (Porcupine, on-device)
-    stt.js            דיבור לטקסט (Web Speech)
-    engine.js         מכונת המצבים ובעלות על המיקרופון
+  voice/              the WALL·E voice pipeline
+    wake.js           the wake word (Porcupine, on-device)
+    stt.js            speech to text (Web Speech)
+    engine.js         the state machine and microphone ownership
     models/           porcupine_params.pv, hi-walle.ppn
-  sim-bridge.js       הגשר לסימולטור — אל תמחק
+  sim-bridge.js       the bridge to the simulator — do not delete
 ```
 
-## כתיבת אפליקציה חדשה
+## Writing a new app
 
-צור `app/screens/mail.js`, הוסף אותו ל-`index.html`, ורשום מסך בשם
-שזהה ל-`name` שבקטלוג:
+Create `app/screens/mail.js`, add it to `index.html`, and register a screen
+under exactly the `name` from the catalog:
 
 ```js
 SCREENS['Mail'] = {
@@ -163,69 +173,71 @@ SCREENS['Mail'] = {
 };
 ```
 
-הכלים שעומדים לרשותך ב-`ui.js`:
+What `ui.js` gives you:
 
 | | |
 |---|---|
-| `UI.row({...})` | שורת רשימה: `label`, `sub`, `value`, `icon`, `iconBg`, `right`, `strong`, `onTap` |
-| `UI.group(rows, {title, note})` | קבוצת שורות בסגנון inset grouped |
-| `UI.switchEl(on, cb)` | מתג iOS |
-| `UI.tabs(items, active, cb)` | סרגל לשוניות תחתון |
-| `UI.searchField(text)` | שדה חיפוש |
-| `UI.store(k, def)` / `UI.save(k, v)` | שמירה מתמשכת ב-localStorage |
-| `nav.push(view)` / `nav.pop()` | ניווט עם אנימציה |
-| `ctx.setStatusBar(s)` / `ctx.close()` | שליטה בשורת הסטטוס וסגירת האפליקציה |
+| `UI.row({...})` | A list row: `label`, `sub`, `value`, `icon`, `iconBg`, `right`, `strong`, `onTap` |
+| `UI.group(rows, {title, note})` | A group of rows in the inset grouped style |
+| `UI.switchEl(on, cb)` | An iOS switch |
+| `UI.tabs(items, active, cb)` | A bottom tab bar |
+| `UI.searchField(text)` | A search field |
+| `UI.store(k, def)` / `UI.save(k, v)` | Persistence in localStorage |
+| `nav.push(view)` / `nav.pop()` | Navigation with the animation |
+| `ctx.setStatusBar(s)` / `ctx.close()` | Control the status bar and close the app |
 
-`view` תומך ב-`title`, `large: false`, `transparent: true`, `bodyClass`,
-`rightAction`, `leftAction`, ו-`build(body, nav, screen)`.
-אם המסך פותח טיימרים, נקה אותם ב-`screen.addEventListener('screen:teardown', ...)`.
+A `view` supports `title`, `large: false`, `transparent: true`, `bodyClass`,
+`rightAction`, `leftAction`, and `build(body, nav, screen)`.
+If a screen starts timers, clear them in
+`screen.addEventListener('screen:teardown', ...)`.
 
-## הוספת אפליקציה
+## Adding an app
 
-ב-[app/apps.js](app/apps.js), הוסף אובייקט ל-`PAGE_1`, `PAGE_2` או `DOCK`:
+In [app/apps.js](app/apps.js), drop an object into `PAGE_1`, `PAGE_2` or `DOCK`:
 
 ```js
 { name: 'My App',
-  bg:   'linear-gradient(#7ad3ff,#0a6bf5)',   // רקע האייקון
-  mode: 'stroke',                             // 'stroke' או 'fill'
-  fg:   '#fff',                               // צבע הסמל
-  icon: '<path d="M4 6h16M4 12h16"/>',        // SVG פנימי, viewBox 0 0 24 24
-  rows: ['First row', 'Second row'] }         // המסך שנפתח בלחיצה
+  bg:   'linear-gradient(#7ad3ff,#0a6bf5)',   // icon background
+  mode: 'stroke',                             // 'stroke' or 'fill'
+  fg:   '#fff',                               // glyph colour
+  icon: '<path d="M4 6h16M4 12h16"/>',        // inner SVG, viewBox 0 0 24 24
+  rows: ['First row', 'Second row'] }         // the screen it opens
 ```
 
-## קישורים ישירים
+## Deep links
 
 ```
-app/index.html#app=Mail                    פותח את Mail מיד
-index.html?device=pixel-8                  נטען עם מכשיר אחר
-index.html?url=app%2Findex.html%23app=Maps מסך מסוים בתוך המסגרת
+app/index.html#app=Mail                    opens Mail straight away
+index.html?device=pixel-8                  loads with a different device
+index.html?url=app%2Findex.html%23app=Maps a specific screen inside the frame
 ```
 
-## מה הגשר נותן לקוד שלך
+## What the bridge gives your code
 
-משתני CSS של האזורים הבטוחים:
+CSS variables for the safe areas:
 
 ```css
-.appbar { padding-top:    var(--sat); }   /* דיינמיק איילנד / נאטש */
-.tabbar { padding-bottom: var(--sab); }   /* פס הבית */
+.appbar { padding-top:    var(--sat); }   /* dynamic island / notch */
+.tabbar { padding-bottom: var(--sab); }   /* home indicator */
 .content{ padding-inline: var(--sal) var(--sar); }
 ```
 
-מאפיינים על `<html>`: `data-platform` (`ios`/`android`), `data-theme`, `data-orientation`.
+Attributes on `<html>`: `data-platform` (`ios`/`android`), `data-theme`,
+`data-orientation`.
 
-וב-JS:
+And in JS:
 
 ```js
-window.sim.setStatusBar('light');   // או 'dark'
+window.sim.setStatusBar('light');   // or 'dark'
 
 window.addEventListener('sim:config', (e) => {
   const { platform, deviceName, theme, orientation, safe } = e.detail;
 });
 ```
 
-## הוספת מכשיר
+## Adding a device
 
-ב-[simulator/devices.js](simulator/devices.js):
+In [simulator/devices.js](simulator/devices.js):
 
 ```js
 { id: 'my-phone', name: 'My Phone', platform: 'android',
