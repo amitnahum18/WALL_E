@@ -12,9 +12,9 @@
    is paused for the whole command turn and only resumes once recognition
    has fully ended.
 
-   It is a module-level singleton on purpose: today it lives and dies with
-   the WALL·E screen, but nothing here assumes that, so always-on listening
-   is a matter of moving who calls start().
+   It is a module-level singleton on purpose: an armed wake word outlives
+   the WALL·E screen and keeps listening system-wide, which is why nothing
+   here is owned by a screen. indicator.js is what makes that visible.
    =========================================================== */
 (() => {
   const DEFAULTS = {
@@ -26,7 +26,8 @@
     sensitivity: 0.5,
     phrases: 'hi walle, hi wally, hey walle, hey wally',
     lang: 'en-US',
-    maxMs: 12000,
+    silenceMs: 2000,                // end the command after this much quiet
+    maxMs: 60000,                   // ceiling, not the normal way a turn ends
     beep: true,
   };
 
@@ -40,6 +41,10 @@
     metrics: UI.store('walle.metrics', { detections: 0, falsePositives: 0, wakeMs: 0, sttMs: 0 }),
 
     heard: '',                  // what the phrase listener last made out
+    _armedFlag: false,
+    /* true from the moment the wake word is armed until it is turned off —
+       it stays true across a command turn, and across closing the app */
+    get armed() { return this._armedFlag; },
 
     /* ---------- config ---------- */
     get config() { return Object.assign({}, cfg); },
@@ -70,6 +75,7 @@
 
     _fail(code, message) {
       this._stt = null;
+      this._armedFlag = false;
       this._set('error', { code, message });
     },
 
@@ -134,6 +140,7 @@
           onWake: () => this._onWake(''),
         });
         if (this._stale(gen)) { await WAKE.release(); return; }
+        this._armedFlag = true;
         this._set('wake');
       } catch (e) {
         const msg = String((e && e.message) || e);
@@ -168,6 +175,7 @@
             this._emit({ type: 'heard', text });
           },
         });
+        this._armedFlag = true;
         this._set('wake');
       } catch (e) {
         this._fail('ERROR', String((e && e.message) || e));
@@ -176,6 +184,7 @@
 
     async stop() {
       const gen = ++this._gen;
+      this._armedFlag = false;
       if (this._stt) { this._stt.abort(); this._stt = null; }
       PHRASE.release();
       await WAKE.release();
@@ -240,6 +249,7 @@
 
       this._stt = STT.listenOnce({
         lang: cfg.lang,
+        silenceMs: cfg.silenceMs,
         maxMs: cfg.maxMs,
         onInterim: (text) => {
           this.interim = text;

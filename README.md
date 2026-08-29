@@ -16,7 +16,10 @@ them on `file://` — then run a local server instead:
 
 ## What works on the device
 
-**The home screen** — two pages, 32 apps, a dock, page dots, a Search pill.
+**The home screen** — 34 apps across pages of 24, a dock, page dots, a Search
+pill. Like the real thing it only pages sideways and never scrolls up and down,
+so the catalog in `apps.js` is reflowed into pages of 24: add a 25th app to a
+page and it starts a new one rather than being clipped below the fold.
 Swipe between pages by dragging with the mouse, with snapping. Tapping an icon
 opens the app with the iOS zoom animation. To go back: swipe from the bottom
 edge, press `Esc`, or use the Home button. The Clock icon has live hands and
@@ -110,6 +113,22 @@ straight from that utterance, with no second turn.
 The language model `porcupine_params.pv` is pulled from jsDelivr automatically.
 Put a local copy in `app/voice/models/` and it will be preferred.
 
+### It keeps listening outside the app
+
+Arming the wake word arms the system, not the screen. Close WALL·E and it is
+still listening, so a pill sits under the status bar saying so: blue while
+waiting for the name, red while a command is being captured, and it shows what
+the recogniser is hearing as it hears it. Tapping the pill opens WALL·E. It
+disappears the moment you turn the switch off, which is the only way to stop it.
+
+### A command lasts as long as you talk
+
+The command turn is not on a stopwatch. The recogniser stays continuous and the
+turn ends after a stretch of silence — 2 seconds by default, adjustable under
+END THE COMMAND AFTER — so a long sentence is never cut in half. A 60 second
+ceiling sits behind that as a backstop, and the orb can be tapped to end the
+turn early.
+
 ### Tuning
 
 The app screen counts detections, false positives, the wake→listening delay and
@@ -171,6 +190,7 @@ app/                  ★ this is where you write
     phrase.js         the wake word by transcript (no key, always streaming)
     stt.js            speech to text (Web Speech)
     engine.js         the state machine and microphone ownership
+    indicator.js      the listening pill, shown system-wide while armed
     models/           porcupine_params.pv, hi-walle.ppn
   sim-bridge.js       the bridge to the simulator — do not delete
 ```

@@ -1,10 +1,11 @@
 /* ===========================================================
    stt.js — speech to text, one utterance at a time.
 
-   Wraps the browser's SpeechRecognition. The engine only ever asks for
-   a single command, so `continuous` stays off and the browser's own
-   end-of-speech detection closes the turn. A hard cap is layered on top
-   so a noisy room can never hold the microphone open forever.
+   Wraps the browser's SpeechRecognition. A command runs for as long as
+   someone keeps talking: the recogniser stays continuous, and the turn
+   ends after a stretch of silence rather than on a stopwatch, so a long
+   sentence is never cut in half. A generous ceiling sits behind that so
+   a noisy room cannot hold the microphone open forever.
 
    Swapping this file for a Whisper-backed one is the intended upgrade
    path: keep `listenOnce` and the four callbacks and nothing else moves.
@@ -15,7 +16,7 @@
   const STT = {
     get supported() { return !!SR; },
 
-    /* listenOnce({ lang, maxMs, onInterim, onFinal, onError })
+    /* listenOnce({ lang, silenceMs, maxMs, onInterim, onFinal, onError })
        -> { stop(), abort() }
        Exactly one of onFinal / onError fires, and only once. */
     listenOnce(o = {}) {
@@ -25,21 +26,32 @@
       }
 
       const r = new SR();
-      r.lang = o.lang || 'he-IL';
-      r.continuous = false;
+      r.lang = o.lang || 'en-US';
+      r.continuous = true;                     // keep going across pauses
       r.interimResults = true;
       r.maxAlternatives = 1;
 
       let settled = false;
       let finalText = '';
       let interim = '';
+      let quiet = null;
 
-      const cap = setTimeout(() => { try { r.stop(); } catch (e) {} }, o.maxMs || 12000);
+      const cap = setTimeout(() => { try { r.stop(); } catch (e) {} }, o.maxMs || 60000);
+
+      /* Every scrap of speech pushes the finish line back; the turn ends
+         once nothing new has arrived for a while. */
+      const silenceMs = o.silenceMs || 2000;
+      const armQuiet = () => {
+        clearTimeout(quiet);
+        quiet = setTimeout(() => { try { r.stop(); } catch (e) {} }, silenceMs);
+      };
+      armQuiet();
 
       const settle = (kind, payload) => {
         if (settled) return;
         settled = true;
         clearTimeout(cap);
+        clearTimeout(quiet);
         if (kind === 'final') o.onFinal && o.onFinal(payload);
         else o.onError && o.onError(payload);
       };
@@ -51,8 +63,11 @@
           if (res.isFinal) finalText += res[0].transcript;
           else interim += res[0].transcript;
         }
+        armQuiet();
         o.onInterim && o.onInterim((finalText + interim).trim());
       };
+
+      r.onspeechstart = armQuiet;
 
       /* onerror always precedes onend; onend is what actually closes the turn,
          so a clean stop after some speech still resolves as a final result. */

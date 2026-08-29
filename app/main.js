@@ -94,14 +94,25 @@ function makeIcon(app) {
 
 /* ---------- home screen ---------- */
 
-APP_PAGES.forEach((apps) => {
+/* A page holds 24 icons and the home screen only pages sideways — it never
+   scrolls up and down, exactly like the real thing. So the catalog is
+   reflowed into pages of 24: a 25th app starts a new page instead of
+   being clipped below the fold where nothing can reach it. */
+const PER_PAGE = 24;
+const PAGES = [];
+[].concat(...APP_PAGES).forEach((app) => {
+  if (!PAGES.length || PAGES[PAGES.length - 1].length === PER_PAGE) PAGES.push([]);
+  PAGES[PAGES.length - 1].push(app);
+});
+
+PAGES.forEach((apps) => {
   const page = document.createElement('div');
   page.className = 'page';
   apps.forEach((app) => page.appendChild(makeIcon(app)));
   pagesEl.appendChild(page);
 });
 
-APP_PAGES.forEach(() => dotsEl.appendChild(document.createElement('i')));
+PAGES.forEach(() => dotsEl.appendChild(document.createElement('i')));
 APP_DOCK.forEach((app) => dockEl.appendChild(makeIcon(app)));
 
 function syncDots() {
@@ -256,10 +267,15 @@ window.addEventListener('load', () => {
   window.sim && sim.setStatusBar('light');
 });
 
+/* open an app from outside the springboard — the listening pill uses this */
+window.openAppByName = (name) => {
+  const app = [].concat(...APP_PAGES, APP_DOCK)
+    .find((a) => a.name.toLowerCase() === String(name).toLowerCase());
+  if (app) openApp(app, ICON_ELS.get(app.name));
+};
+
 /* ---------- deep link:  index.html#app=Mail  ---------- */
 if (location.hash.startsWith('#app=')) {
-  const wanted = decodeURIComponent(location.hash.slice(5)).toLowerCase();
-  const app = [].concat(...APP_PAGES, APP_DOCK)
-    .find((a) => a.name.toLowerCase() === wanted);
-  if (app) requestAnimationFrame(() => openApp(app, ICON_ELS.get(app.name)));
+  const wanted = decodeURIComponent(location.hash.slice(5));
+  requestAnimationFrame(() => window.openAppByName(wanted));
 }

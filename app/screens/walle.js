@@ -120,12 +120,16 @@
             onTap: () => { E().setConfig({ lang: l.id }); paint(); },
           })), { title: 'TRANSCRIPTION' }));
 
-          body.appendChild(UI.group([8000, 12000, 20000].map((ms) => UI.row({
-            label: (ms / 1000) + ' seconds',
-            value: c.maxMs === ms ? '✓' : '',
+          body.appendChild(UI.group([1000, 2000, 3000].map((ms) => UI.row({
+            label: (ms / 1000).toFixed(1) + ' seconds',
+            value: c.silenceMs === ms ? '✓' : '',
             chevron: false,
-            onTap: () => { E().setConfig({ maxMs: ms }); paint(); },
-          })), { title: 'MAXIMUM COMMAND LENGTH' }));
+            onTap: () => { E().setConfig({ silenceMs: ms }); paint(); },
+          })), {
+            title: 'END THE COMMAND AFTER',
+            note: 'A command runs as long as you keep talking and ends after this much silence. ' +
+                  'A ' + (c.maxMs / 1000) + ' second ceiling sits behind it as a backstop.',
+          }));
 
           body.appendChild(UI.group([
             UI.row({ label: 'Beep on wake', right: UI.switchEl(c.beep, (on) => E().setConfig({ beep: on })) }),
@@ -287,8 +291,13 @@
             if (ev.type === 'config') paintMetrics();
           });
 
-          /* leaving the app must give the microphone back */
-          screen.addEventListener('screen:teardown', () => { off(); engine.stop(); });
+          /* Closing the app stops the screen, not the listening: an armed
+             wake word keeps running system-wide and says so through the
+             pill. Only a half-finished push-to-talk turn is abandoned. */
+          screen.addEventListener('screen:teardown', () => {
+            off();
+            if (engine.state === 'listen' && !engine.armed) engine.stop();
+          });
         },
       });
     },

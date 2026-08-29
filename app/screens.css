@@ -643,3 +643,29 @@ html[data-theme="dark"] .so-screen{ --so-bg: #000000; }
 }
 .walle-heard.on{ opacity: 1; min-height: 16px; }
 .walle-input-wide{ width: 100%; text-align: start; }
+
+/* the listening pill — lives above both the springboard and an open app */
+.listen-pill{
+  position: fixed; z-index: 60;
+  top: calc(var(--sat) + 6px); left: 50%; transform: translateX(-50%);
+  display: flex; align-items: center; gap: 7px;
+  max-width: min(80%, 300px);
+  padding: 6px 13px 6px 10px; border: 0; border-radius: 999px;
+  background: rgba(10,107,245,.92); color: #fff;
+  font: 500 12.5px/1 -apple-system, system-ui, sans-serif;
+  box-shadow: 0 6px 18px rgba(0,0,0,.28);
+  cursor: pointer; backdrop-filter: blur(12px);
+  animation: pill-in .26s cubic-bezier(.32,.72,0,1);
+}
+.listen-pill[data-state="listen"]{ background: rgba(255,59,48,.94); }
+.listen-pill[data-state="starting"]{ background: rgba(90,90,96,.92); }
+.listen-pill .listen-text{
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+}
+.listen-dot{
+  flex: none; width: 7px; height: 7px; border-radius: 50%;
+  background: #fff; animation: pill-pulse 1.6s ease-in-out infinite;
+}
+.listen-pill[data-state="listen"] .listen-dot{ animation-duration: .8s; }
+@keyframes pill-pulse{ 50%{ opacity: .3; transform: scale(.8); } }
+@keyframes pill-in{ from{ opacity: 0; transform: translate(-50%, -8px); } }
