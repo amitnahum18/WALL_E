@@ -219,6 +219,10 @@
           const metricsBox = UI.el('div');
           body.appendChild(metricsBox);
 
+          /* --- is the recogniser actually alive? --- */
+          const listenerBox = UI.el('div');
+          body.appendChild(listenerBox);
+
           /* --- transcripts --- */
           const logBox = UI.el('div');
           body.appendChild(logBox);
@@ -234,6 +238,68 @@
               UI.row({ label: 'Mark last as false positive', labelColor: 'var(--ios-blue)', chevron: false,
                        onTap: () => engine.markFalsePositive() }),
             ], { title: 'ACCURACY' }));
+          };
+
+          /* "listening and doing nothing" and "stopped listening" look
+             identical from outside. These numbers tell them apart.
+             Built once and updated in place — a panel that rebuilt itself
+             every second would swap the tap targets out from under a finger. */
+          let listener = null;
+          const tailOfHeard = () => String(engine.heard || '').split(' ').slice(-3).join(' ').trim();
+
+          const buildListener = () => {
+            listenerBox.innerHTML = '';
+            listener = null;
+            if (engine.config.wakeMode !== 'phrase') return;
+
+            const val = {};
+            const row = (label, key) => {
+              const el = UI.el('span', 'row-value', '—');
+              val[key] = el;
+              return UI.row({ label, right: el });
+            };
+
+            const addRow = UI.row({
+              label: 'Add what it heard as a wake phrase',
+              labelColor: 'var(--ios-blue)', chevron: false,
+              onTap: () => {
+                const tail = tailOfHeard();
+                if (!tail) return;
+                const list = engine.phraseList();
+                if (list.indexOf(tail) < 0) list.push(tail);
+                engine.setConfig({ phrases: list.join(', ') });
+              },
+            });
+
+            listenerBox.appendChild(UI.group([
+              row('Recogniser', 'run'),
+              row('Last heard anything', 'last'),
+              row('This session started', 'started'),
+              row('Sessions / restarts', 'sessions'),
+              row('Last error', 'error'),
+              addRow,
+            ], {
+              title: 'LISTENER',
+              note: '"Last heard anything" is the honest one: if it keeps climbing while you are ' +
+                    'talking, the recogniser has gone deaf and the session needs recycling.',
+            }));
+
+            listener = { val, addLabel: addRow.querySelector('b') };
+          };
+
+          const paintListener = () => {
+            if (!listener) return;
+            const st = PHRASE.stats;
+            const ago = (ts) => (ts ? Math.round((Date.now() - ts) / 1000) + 's ago' : 'never');
+            listener.val.run.textContent = PHRASE.running ? 'running' : 'stopped';
+            listener.val.last.textContent = ago(st.lastResultAt);
+            listener.val.started.textContent = ago(st.startedAt);
+            listener.val.sessions.textContent = st.sessions + ' / ' + st.restarts;
+            listener.val.error.textContent = st.lastError || 'none';
+            const tail = tailOfHeard();
+            listener.addLabel.textContent = tail
+              ? 'Add “' + tail + '” as a wake phrase'
+              : 'Add what it heard as a wake phrase';
           };
 
           const paintLog = () => {
@@ -276,20 +342,24 @@
             heard.classList.toggle('on', !!showHeard);
           };
 
-          paintState(); paintMetrics(); paintLog();
+          paintState(); paintMetrics(); buildListener(); paintListener(); paintLog();
 
           const off = engine.on((ev) => {
             if (ev.type === 'interim') { live.textContent = ev.text; return; }
             if (ev.type === 'heard') {
-              heard.textContent = 'heard: ' + ev.text;
+              heard.textContent = 'heard: ' + ev.text.split(' ').slice(-9).join(' ');
               heard.classList.add('on');
               return;
             }
             if (ev.type === 'final') { paintLog(); paintMetrics(); paintState(); return; }
             if (ev.type === 'metrics') { paintMetrics(); paintLog(); return; }
             paintState();
-            if (ev.type === 'config') paintMetrics();
+            if (ev.type === 'config') { paintMetrics(); buildListener(); paintListener(); }
           });
+
+          /* the counters only mean anything if they keep counting */
+          const tick = setInterval(paintListener, 1000);
+          screen.addEventListener('screen:teardown', () => clearInterval(tick));
 
           /* Closing the app stops the screen, not the listening: an armed
              wake word keeps running system-wide and says so through the

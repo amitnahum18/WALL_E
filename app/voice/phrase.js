@@ -54,8 +54,14 @@
     _lang: 'en-US',
     _silenceMs: 2000,
     _maxMs: 60000,
+    _recycleMs: 25000,
+    _recycle: null,
     _cap: null,
     _fails: 0,
+
+    /* enough to tell "it is listening and hearing nothing" apart from
+       "it stopped listening and still looks fine" */
+    stats: { sessions: 0, startedAt: 0, lastResultAt: 0, lastError: '', restarts: 0 },
 
     get running() { return this._armed && !this._paused; },
     get capturing() { return this._capturing; },
@@ -140,6 +146,8 @@
     },
 
     _kill() {
+      clearTimeout(this._recycle);
+      this._recycle = null;
       const r = this._r;
       this._r = null;
       if (!r) return;
@@ -161,6 +169,18 @@
       r.interimResults = true;
       r.maxAlternatives = 1;
       this._r = r;
+      this.stats.sessions++;
+      this.stats.startedAt = Date.now();
+
+      /* A long-lived continuous session quietly stops returning results:
+         the recogniser still looks alive, the microphone light stays on,
+         and nothing is ever heard again. Recycling it on a timer keeps
+         sessions young. Never mid-command — that would cut a sentence. */
+      clearTimeout(this._recycle);
+      this._recycle = setTimeout(() => {
+        if (this._capturing) { this._recycle = setTimeout(() => this._restart(), 4000); return; }
+        this._restart();
+      }, this._recycleMs);
 
       r.onresult = (ev) => {
         /* the whole session, not just the newest slice: the command is
@@ -169,6 +189,7 @@
         let text = '';
         for (let i = 0; i < ev.results.length; i++) text += ev.results[i][0].transcript + ' ';
         const t = norm(text);
+        this.stats.lastResultAt = Date.now();
         if (!t) return;
 
         const rest = this.match(t);
@@ -198,6 +219,7 @@
 
       r.onerror = (ev) => {
         const code = ev.error || 'error';
+        this.stats.lastError = code + ' @ ' + new Date().toLocaleTimeString('en-GB');
         if (code === 'not-allowed' || code === 'service-not-allowed') {
           this._armed = false;
           this._onHeard && this._onHeard('__denied__');
@@ -218,7 +240,8 @@
           this._onCommand && this._onCommand(cmd);
         }
         if (!this._armed || this._paused) return;
-        const wait = this._fails > 3 ? Math.min(1000 * this._fails, 8000) : 250;
+        this.stats.restarts++;
+        const wait = this._fails > 3 ? Math.min(1000 * this._fails, 8000) : 120;
         setTimeout(() => this._spin(), wait);
       };
 

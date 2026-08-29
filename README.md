@@ -132,6 +132,13 @@ END THE COMMAND AFTER — so a long sentence is never cut in half. A 60 second
 ceiling sits behind that as a backstop, and the orb can be tapped to end the
 turn early.
 
+A continuous session does not stay healthy indefinitely — after a while it
+quietly stops returning results while still looking alive, microphone light and
+all, which reads as "listening and doing nothing". So the session is recycled
+every 25 seconds while waiting, and never mid-command. If it ever looks deaf
+again, the LISTENER panel in the app says when it last heard anything, how many
+sessions have been started, and what the last error was.
+
 "Silence" means nothing new was said, not that no events arrived: the recogniser
 keeps re-emitting the same interim result while it refines it, and counting
 those as speech would hold the turn open forever. Only changed text pushes the
