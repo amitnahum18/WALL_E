@@ -132,6 +132,12 @@ END THE COMMAND AFTER — so a long sentence is never cut in half. A 60 second
 ceiling sits behind that as a backstop, and the orb can be tapped to end the
 turn early.
 
+"Silence" means nothing new was said, not that no events arrived: the recogniser
+keeps re-emitting the same interim result while it refines it, and counting
+those as speech would hold the turn open forever. Only changed text pushes the
+finish line back, and the recogniser's own end-of-speech signal pushes it in
+the other direction.
+
 In phrase mode the command is captured by the same session that heard the name,
 never by a second recogniser. The name is matched on an interim result, in the
 middle of the sentence being spoken, so tearing that session down at the match

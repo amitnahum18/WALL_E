@@ -169,6 +169,7 @@
           phrases,
           lang: cfg.lang,
           silenceMs: cfg.silenceMs,
+          maxMs: cfg.maxMs,
           onWake: () => {
             this.metrics.detections++;
             this._wokeAt = performance.now();

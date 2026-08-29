@@ -53,6 +53,8 @@
     _phrases: [],
     _lang: 'en-US',
     _silenceMs: 2000,
+    _maxMs: 60000,
+    _cap: null,
     _fails: 0,
 
     get running() { return this._armed && !this._paused; },
@@ -76,6 +78,7 @@
       if (!this._re) throw new Error('no-phrase');
       this._lang = o.lang || 'en-US';
       this._silenceMs = o.silenceMs || 2000;
+      this._maxMs = o.maxMs || 60000;
       this._onWake = o.onWake;
       this._onHeard = o.onHeard;
       this._onCommandInterim = o.onCommandInterim;
@@ -122,10 +125,15 @@
       this._capturing = false;
       this._cmd = '';
       clearTimeout(this._quiet);
+      clearTimeout(this._cap);
       this._quiet = null;
+      this._cap = null;
     },
 
-    /* every scrap of speech pushes the finish line back */
+    /* New words push the finish line back — new ones only. Chrome keeps
+       re-emitting the same interim result while it refines it, and treating
+       those as speech meant the timer was reset forever and the turn never
+       ended. Silence is "nothing new was said", not "no events arrived". */
     _armQuiet() {
       clearTimeout(this._quiet);
       this._quiet = setTimeout(() => this.finish(), this._silenceMs);
@@ -170,13 +178,23 @@
           if (rest === null) return;
           this._capturing = true;
           this._fails = 0;
+          this._cmd = '';
           this._onWake && this._onWake();
+          this._armQuiet();
+          /* a turn cannot outlive this, however talkative the room is */
+          clearTimeout(this._cap);
+          this._cap = setTimeout(() => this.finish(), this._maxMs);
         }
 
-        if (rest !== null) this._cmd = rest;
+        if (rest === null || rest === this._cmd) return;   // nothing new was said
+        this._cmd = rest;
         this._onCommandInterim && this._onCommandInterim(this._cmd);
         this._armQuiet();
       };
+
+      /* the recogniser's own end-of-speech detection, which is a better
+         signal than watching the transcript go quiet */
+      r.onspeechend = () => { if (this._capturing) this._armQuiet(); };
 
       r.onerror = (ev) => {
         const code = ev.error || 'error';
