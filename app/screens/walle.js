@@ -10,14 +10,22 @@
     { id: 'he-IL', label: 'עברית' },
   ];
 
-  const keywordLabel = (c) => (c.keyword === 'custom' ? c.customLabel : c.keyword);
+  const keywordLabel = (c) => (
+    c.wakeMode === 'phrase' ? (String(c.phrases).split(',')[0] || '').trim()
+      : c.keyword === 'custom' ? c.customLabel : c.keyword
+  );
 
   const STATUS = {
     idle:     { text: 'Not listening',        hint: 'Tap the orb to talk, or arm the wake word below.' },
     starting: { text: 'Loading the model…',   hint: 'First run downloads Porcupine once.' },
-    wake:     { text: 'Waiting for its name', hint: 'Nothing leaves this machine until the wake word is heard.' },
+    wake:     { text: 'Waiting for its name', hint: '' },
     listen:   { text: 'Listening',            hint: 'Speak the command. Tap to stop early.' },
     error:    { text: 'Stopped',              hint: '' },
+  };
+
+  const WAKE_HINT = {
+    porcupine: 'Matched by sound, on-device. Nothing leaves this machine until the name is heard.',
+    phrase:    'Matched in the transcript, so the microphone streams the whole time it is armed.',
   };
 
   function when(ts) {
@@ -35,44 +43,74 @@
           const c = E().config;
           body.innerHTML = '';
 
-          /* AccessKey — kept in localStorage, never in the source */
-          const key = UI.el('input', 'walle-input');
-          key.type = 'password';
-          key.placeholder = 'Paste AccessKey';
-          key.value = c.accessKey;
-          key.addEventListener('change', () => E().setConfig({ accessKey: key.value.trim() }));
-          body.appendChild(UI.group([UI.row({ label: 'Picovoice AccessKey', right: key })], {
-            title: 'WAKE WORD',
-            note: 'Free key from console.picovoice.ai. Porcupine needs one even for the built-in words.',
-          }));
+          /* how the name is recognised at all */
+          body.appendChild(UI.group([
+            UI.row({
+              label: 'By sound', sub: 'Porcupine, on-device. Needs a free key.',
+              value: c.wakeMode === 'porcupine' ? '✓' : '', chevron: false,
+              onTap: () => { E().setConfig({ wakeMode: 'porcupine' }); paint(); },
+            }),
+            UI.row({
+              label: 'By transcript', sub: 'No key. Any phrase. Always streaming.',
+              value: c.wakeMode === 'phrase' ? '✓' : '', chevron: false,
+              onTap: () => { E().setConfig({ wakeMode: 'phrase' }); paint(); },
+            }),
+          ], { title: 'DETECTION', note: WAKE_HINT[c.wakeMode] }));
 
-          /* which word */
-          const pick = (id) => E().setConfig({ keyword: id });
-          body.appendChild(UI.group(
-            [{ id: 'custom', label: c.customLabel + ' (custom .ppn)' }]
-              .concat(BUILTINS.map((b) => ({ id: b, label: b })))
-              .map((k) => UI.row({
-                label: k.label,
-                value: c.keyword === k.id ? '✓' : '',
-                chevron: false,
-                onTap: () => { pick(k.id); paint(); },
-              })),
-            { title: 'KEYWORD', note: 'Train "Hi WALL-E" for the Web (WASM) platform in the Picovoice console and drop the .ppn at app/' + c.customPath + '.' },
-          ));
+          if (c.wakeMode === 'phrase') {
+            const ph = UI.el('input', 'walle-input walle-input-wide');
+            ph.type = 'text';
+            ph.placeholder = 'hi walle, hey wally';
+            ph.value = c.phrases;
+            ph.addEventListener('change', () => E().setConfig({ phrases: ph.value }));
+            const phRow = UI.el('div', 'row walle-slider-row');
+            phRow.appendChild(ph);
+            body.appendChild(UI.group([phRow], {
+              title: 'WAKE PHRASES',
+              note: 'Comma separated, and any of them fires. Spaces inside a phrase are ignored, ' +
+                    'so "hi walle" also catches "hi wall e". Watch the Heard line on the main screen ' +
+                    'and add whatever the recogniser actually produces.',
+            }));
+          } else {
+            /* AccessKey — kept in localStorage, never in the source */
+            const key = UI.el('input', 'walle-input');
+            key.type = 'password';
+            key.placeholder = 'Paste AccessKey';
+            key.value = c.accessKey;
+            key.addEventListener('change', () => E().setConfig({ accessKey: key.value.trim() }));
+            body.appendChild(UI.group([UI.row({ label: 'Picovoice AccessKey', right: key })], {
+              title: 'ACCESS',
+              note: 'Free key from console.picovoice.ai. Porcupine needs one even for the built-in words.',
+            }));
 
-          /* sensitivity */
-          const sens = UI.el('input', 'walle-slider');
-          sens.type = 'range';
-          sens.min = '0.1'; sens.max = '0.9'; sens.step = '0.05';
-          sens.value = String(c.sensitivity);
-          const sensVal = UI.el('span', 'row-value', c.sensitivity.toFixed(2));
-          sens.addEventListener('input', () => { sensVal.textContent = Number(sens.value).toFixed(2); });
-          sens.addEventListener('change', () => E().setConfig({ sensitivity: Number(sens.value) }));
-          const sliderRow = UI.el('div', 'row walle-slider-row');
-          sliderRow.appendChild(sens);
-          body.appendChild(UI.group([UI.row({ label: 'Sensitivity', right: sensVal }), sliderRow], {
-            note: 'Higher catches more, and misfires more. Re-arm the wake word to apply.',
-          }));
+            /* which word */
+            const pick = (id) => E().setConfig({ keyword: id });
+            body.appendChild(UI.group(
+              [{ id: 'custom', label: c.customLabel + ' (custom .ppn)' }]
+                .concat(BUILTINS.map((b) => ({ id: b, label: b })))
+                .map((k) => UI.row({
+                  label: k.label,
+                  value: c.keyword === k.id ? '✓' : '',
+                  chevron: false,
+                  onTap: () => { pick(k.id); paint(); },
+                })),
+              { title: 'KEYWORD', note: 'Train "Hi WALL-E" for the Web (WASM) platform in the Picovoice console and drop the .ppn at app/' + c.customPath + '.' },
+            ));
+
+            /* sensitivity */
+            const sens = UI.el('input', 'walle-slider');
+            sens.type = 'range';
+            sens.min = '0.1'; sens.max = '0.9'; sens.step = '0.05';
+            sens.value = String(c.sensitivity);
+            const sensVal = UI.el('span', 'row-value', c.sensitivity.toFixed(2));
+            sens.addEventListener('input', () => { sensVal.textContent = Number(sens.value).toFixed(2); });
+            sens.addEventListener('change', () => E().setConfig({ sensitivity: Number(sens.value) }));
+            const sliderRow = UI.el('div', 'row walle-slider-row');
+            sliderRow.appendChild(sens);
+            body.appendChild(UI.group([UI.row({ label: 'Sensitivity', right: sensVal }), sliderRow], {
+              note: 'Higher catches more, and misfires more. Re-arm the wake word to apply.',
+            }));
+          }
 
           /* language + cap */
           body.appendChild(UI.group(LANGS.map((l) => UI.row({
@@ -158,9 +196,12 @@
           const status = UI.el('div', 'walle-status');
           const hint = UI.el('div', 'walle-hint');
           const live = UI.el('div', 'walle-live');
+          /* what the recogniser is making out right now — the only way to know
+             which spelling to add to the phrase list */
+          const heard = UI.el('div', 'walle-heard');
 
           const stage = UI.el('div', 'walle-stage');
-          stage.append(orb, status, hint, live);
+          stage.append(orb, status, hint, live, heard);
           body.appendChild(stage);
 
           /* --- arm / disarm --- */
@@ -214,20 +255,32 @@
 
             const base = STATUS[s] || STATUS.idle;
             status.textContent = s === 'wake' ? '“' + keywordLabel(c) + '”' : base.text;
-            hint.textContent = engine.error ? engine.error.message : base.hint;
+            hint.textContent = engine.error ? engine.error.message
+                             : s === 'wake' ? WAKE_HINT[c.wakeMode]
+                             : base.hint;
             hint.classList.toggle('bad', !!engine.error);
 
             armSwitch.setAttribute('aria-checked', String(s === 'wake' || s === 'listen' || s === 'starting'));
-            armRow.querySelector('small').textContent = keywordLabel(c);
+            armRow.querySelector('small').textContent =
+              keywordLabel(c) + (c.wakeMode === 'phrase' ? '  ·  by transcript' : '  ·  by sound');
 
             live.textContent = engine.interim;
             live.classList.toggle('on', s === 'listen');
+
+            const showHeard = c.wakeMode === 'phrase' && s === 'wake' && engine.heard;
+            heard.textContent = showHeard ? 'heard: ' + engine.heard : '';
+            heard.classList.toggle('on', !!showHeard);
           };
 
           paintState(); paintMetrics(); paintLog();
 
           const off = engine.on((ev) => {
             if (ev.type === 'interim') { live.textContent = ev.text; return; }
+            if (ev.type === 'heard') {
+              heard.textContent = 'heard: ' + ev.text;
+              heard.classList.add('on');
+              return;
+            }
             if (ev.type === 'final') { paintLog(); paintMetrics(); paintState(); return; }
             if (ev.type === 'metrics') { paintMetrics(); paintLog(); return; }
             paintState();

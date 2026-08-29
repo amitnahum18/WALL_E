@@ -62,6 +62,30 @@ screen capture, no agent, no LLM.
 Transcription is English (`en-US`) by default. Hebrew and British English are
 available in Settings.
 
+### Two ways to recognise the name
+
+Settings → DETECTION picks between them, and they behave very differently.
+
+| | **By sound** (default) | **By transcript** |
+|---|---|---|
+| How | Porcupine matches the acoustic shape of the word, on-device in WebAssembly | A recogniser runs continuously and the name is matched in the text it produces |
+| Setup | A free AccessKey, and training for anything but the built-in words | Nothing. Type the phrase and go |
+| The name | One of `Computer`, `Jarvis`, `Picovoice`, `Bumblebee`, `Terminator` — or a trained `.ppn` | Anything you can spell, in any supported language |
+| Privacy | No audio leaves the machine until the name is heard | The microphone streams the whole time it is armed |
+| Browsers | Anywhere WebAssembly and AudioWorklet run | Chrome only |
+
+By transcript is the fastest way to see the pipeline work end to end, and the
+wrong way to ship it — an assistant that uploads everything it hears while
+waiting for its name is not really waiting.
+
+Spaces inside a phrase are ignored, so `hi walle` also catches "hi wall e" and
+"hiwalle". Recognisers are inconsistent about how they spell an invented name,
+so several spellings are accepted by default (`hi walle, hi wally, hey walle,
+hey wally`) and the main screen shows a **heard:** line with whatever the
+recogniser actually produced — add the spellings you see to the list. If the
+command arrives in the same breath ("hi walle, what's on tomorrow") it is taken
+straight from that utterance, with no second turn.
+
 **It has to be served.** `getUserMedia` is blocked on `file://`:
 
 ```powershell
@@ -73,13 +97,15 @@ available in Settings.
 1. Open the **WALL·E** app and tap the orb — that is push-to-talk, and it
    works immediately with no key at all. The transcript appears live and is
    then saved.
-2. The wake word needs a free **AccessKey** from `console.picovoice.ai`. Paste
-   it into Settings inside the app (it is kept in localStorage only, never in
-   the source) and turn on the **Wake word** switch.
-3. The default is the built-in word `Computer`. For a real "Hi WALL·E": train
-   the word in the Picovoice console for the **Web (WASM)** platform, drop the
-   `.ppn` at `app/voice/models/hi-walle.ppn`, and pick **Custom** in the
-   KEYWORD list.
+2. To hear the name with no setup: Settings → DETECTION → **By transcript**,
+   then turn on the **Wake word** switch and say "hi walle".
+3. For the on-device path, get a free **AccessKey** from
+   `console.picovoice.ai` and paste it into Settings (it is kept in
+   localStorage only, never in the source). The default word is the built-in
+   `Computer`. For a real "Hi WALL·E": train the word in the Picovoice console
+   for the **Web (WASM)** platform — its field takes letters and spaces, so
+   type `hi wall e` — drop the `.ppn` at `app/voice/models/hi-walle.ppn`, and
+   pick **Custom** in the KEYWORD list.
 
 The language model `porcupine_params.pv` is pulled from jsDelivr automatically.
 Put a local copy in `app/voice/models/` and it will be preferred.
@@ -141,7 +167,8 @@ app/                  ★ this is where you write
     calculator.js  messages.js  settings.js  weather.js
     photos.js      clock.js     notes.js     phone.js
   voice/              the WALL·E voice pipeline
-    wake.js           the wake word (Porcupine, on-device)
+    wake.js           the wake word by sound (Porcupine, on-device)
+    phrase.js         the wake word by transcript (no key, always streaming)
     stt.js            speech to text (Web Speech)
     engine.js         the state machine and microphone ownership
     models/           porcupine_params.pv, hi-walle.ppn

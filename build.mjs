@@ -41,6 +41,7 @@ const appJs = [
      so WALL·E falls back to push-to-talk inside the single-file version. */
   read('app', 'voice', 'stt.js'),
   read('app', 'voice', 'wake.js'),
+  read('app', 'voice', 'phrase.js'),
   read('app', 'voice', 'engine.js'),
   read('app', 'screens', 'settings.js'),
   read('app', 'screens', 'messages.js'),
