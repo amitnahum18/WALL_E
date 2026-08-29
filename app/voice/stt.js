@@ -56,15 +56,20 @@
         else o.onError && o.onError(payload);
       };
 
+      /* A long sentence comes back as several final results. Joining them
+         with a space and collapsing the doubles keeps "the meeting" from
+         becoming "themeeting" at every segment boundary. */
+      const joined = () => (finalText + ' ' + interim).replace(/\s+/g, ' ').trim();
+
       r.onresult = (ev) => {
         interim = '';
         for (let i = ev.resultIndex; i < ev.results.length; i++) {
           const res = ev.results[i];
-          if (res.isFinal) finalText += res[0].transcript;
-          else interim += res[0].transcript;
+          if (res.isFinal) finalText += ' ' + res[0].transcript;
+          else interim += ' ' + res[0].transcript;
         }
         armQuiet();
-        o.onInterim && o.onInterim((finalText + interim).trim());
+        o.onInterim && o.onInterim(joined());
       };
 
       r.onspeechstart = armQuiet;
@@ -78,7 +83,7 @@
       };
 
       r.onend = () => {
-        const text = (finalText || interim).trim();
+        const text = joined();
         if (text) settle('final', text);
         else settle('error', 'no-speech');
       };

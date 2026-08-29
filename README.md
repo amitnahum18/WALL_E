@@ -116,10 +116,13 @@ Put a local copy in `app/voice/models/` and it will be preferred.
 ### It keeps listening outside the app
 
 Arming the wake word arms the system, not the screen. Close WALL·E and it is
-still listening, so a pill sits under the status bar saying so: blue while
-waiting for the name, red while a command is being captured, and it shows what
-the recogniser is hearing as it hears it. Tapping the pill opens WALL·E. It
-disappears the moment you turn the switch off, which is the only way to stop it.
+still listening, so a **blue dot** sits under the status bar saying so — small
+and quiet, the way a phone shows the microphone is live. It opens into a full
+pill only when there is something to say: for a moment when the name is heard,
+and for as long as a command is being captured, where it turns red and shows
+the words as they arrive. Then it shrinks back to a dot. Tapping it opens
+WALL·E. It disappears the moment you turn the switch off, which is the only way
+to stop it.
 
 ### A command lasts as long as you talk
 
@@ -128,6 +131,14 @@ turn ends after a stretch of silence — 2 seconds by default, adjustable under
 END THE COMMAND AFTER — so a long sentence is never cut in half. A 60 second
 ceiling sits behind that as a backstop, and the orb can be tapped to end the
 turn early.
+
+In phrase mode the command is captured by the same session that heard the name,
+never by a second recogniser. The name is matched on an interim result, in the
+middle of the sentence being spoken, so tearing that session down at the match
+would drop the rest of the sentence and lose whatever is said while a
+replacement starts. Instead the command is read as "everything after the name",
+re-read from the full transcript on every update, which is what makes a long
+sentence survive intact.
 
 ### Tuning
 

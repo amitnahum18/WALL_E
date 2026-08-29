@@ -8,6 +8,14 @@
    name" property of the Porcupine path is gone. It is the quick way to
    see the pipeline work, not the way to ship it.
 
+   The command is captured by this same recogniser rather than handed to
+   a fresh one. That matters: the name is matched on an interim result,
+   in the middle of the sentence being spoken, so tearing the session
+   down at that moment would throw away the rest of the sentence and
+   lose whatever is said while a new one starts. Instead the session
+   keeps running and the command is simply everything after the name,
+   re-read from the full transcript on every update.
+
    Chrome ends a continuous session on its own every so often, so the
    recogniser is restarted whenever it stops while still armed.
    =========================================================== */
@@ -38,14 +46,17 @@
     _r: null,
     _armed: false,
     _paused: false,
+    _capturing: false,
+    _cmd: '',
+    _quiet: null,
     _re: null,
     _phrases: [],
     _lang: 'en-US',
-    _onWake: null,
-    _onHeard: null,
+    _silenceMs: 2000,
     _fails: 0,
 
     get running() { return this._armed && !this._paused; },
+    get capturing() { return this._capturing; },
     get label() { return this._phrases[0] || ''; },
 
     /* null when the name is not in there; otherwise whatever followed it */
@@ -57,23 +68,29 @@
       return m ? t.slice(m.index + m[0].length).trim() : null;
     },
 
-    start({ phrases, lang, onWake, onHeard }) {
+    start(o) {
       if (!SR) throw new Error('no-stt');
       this.release();
-      this._phrases = (phrases || []).slice();
+      this._phrases = (o.phrases || []).slice();
       this._re = build(this._phrases);
       if (!this._re) throw new Error('no-phrase');
-      this._lang = lang || 'en-US';
-      this._onWake = onWake;
-      this._onHeard = onHeard;
+      this._lang = o.lang || 'en-US';
+      this._silenceMs = o.silenceMs || 2000;
+      this._onWake = o.onWake;
+      this._onHeard = o.onHeard;
+      this._onCommandInterim = o.onCommandInterim;
+      this._onCommand = o.onCommand;
       this._armed = true;
       this._paused = false;
+      this._capturing = false;
+      this._cmd = '';
       this._fails = 0;
       this._spin();
     },
 
     pause() {
       this._paused = true;
+      this._endCapture();
       this._kill();
     },
 
@@ -86,9 +103,32 @@
     release() {
       this._armed = false;
       this._paused = false;
+      this._endCapture();
       this._kill();
       this._re = null;
       this._phrases = [];
+    },
+
+    /* end the command turn now instead of waiting out the silence */
+    finish() {
+      if (!this._capturing) return;
+      const cmd = this._cmd;
+      this._endCapture();
+      this._restart();                 // a fresh session, so old text cannot re-trigger
+      this._onCommand && this._onCommand(cmd);
+    },
+
+    _endCapture() {
+      this._capturing = false;
+      this._cmd = '';
+      clearTimeout(this._quiet);
+      this._quiet = null;
+    },
+
+    /* every scrap of speech pushes the finish line back */
+    _armQuiet() {
+      clearTimeout(this._quiet);
+      this._quiet = setTimeout(() => this.finish(), this._silenceMs);
     },
 
     _kill() {
@@ -97,6 +137,11 @@
       if (!r) return;
       r.onend = null; r.onresult = null; r.onerror = null;
       try { r.abort(); } catch (e) {}
+    },
+
+    _restart() {
+      this._kill();
+      setTimeout(() => this._spin(), 120);
     },
 
     _spin() {
@@ -110,17 +155,27 @@
       this._r = r;
 
       r.onresult = (ev) => {
+        /* the whole session, not just the newest slice: the command is
+           defined as everything after the name, so it has to be re-read
+           from the full transcript each time */
         let text = '';
-        for (let i = ev.resultIndex; i < ev.results.length; i++) text += ev.results[i][0].transcript;
+        for (let i = 0; i < ev.results.length; i++) text += ev.results[i][0].transcript + ' ';
         const t = norm(text);
         if (!t) return;
-        this._onHeard && this._onHeard(t);
 
         const rest = this.match(t);
-        if (rest === null) return;                 // '' is a hit with nothing after it
-        this._fails = 0;
-        this.pause();
-        this._onWake && this._onWake(rest);
+
+        if (!this._capturing) {
+          this._onHeard && this._onHeard(t);
+          if (rest === null) return;
+          this._capturing = true;
+          this._fails = 0;
+          this._onWake && this._onWake();
+        }
+
+        if (rest !== null) this._cmd = rest;
+        this._onCommandInterim && this._onCommandInterim(this._cmd);
+        this._armQuiet();
       };
 
       r.onerror = (ev) => {
@@ -133,11 +188,17 @@
         }
       };
 
-      /* Chrome closes the session on its own; back off if it keeps failing
-         so a broken service cannot turn into a restart storm. */
+      /* Chrome closes the session on its own; keep whatever a command turn
+         had collected, and back off if it keeps failing so a broken service
+         cannot turn into a restart storm. */
       r.onend = () => {
         if (this._r !== r) return;
         this._r = null;
+        if (this._capturing) {
+          const cmd = this._cmd;
+          this._endCapture();
+          this._onCommand && this._onCommand(cmd);
+        }
         if (!this._armed || this._paused) return;
         const wait = this._fails > 3 ? Math.min(1000 * this._fails, 8000) : 250;
         setTimeout(() => this._spin(), wait);

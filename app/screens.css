@@ -669,3 +669,9 @@ html[data-theme="dark"] .so-screen{ --so-bg: #000000; }
 .listen-pill[data-state="listen"] .listen-dot{ animation-duration: .8s; }
 @keyframes pill-pulse{ 50%{ opacity: .3; transform: scale(.8); } }
 @keyframes pill-in{ from{ opacity: 0; transform: translate(-50%, -8px); } }
+
+/* collapsed: just the dot, the way a phone shows the mic is live */
+.listen-pill{ transition: padding .22s cubic-bezier(.32,.72,0,1), background .3s; }
+.listen-pill.is-dot{ padding: 5px; gap: 0; }
+.listen-pill.is-dot .listen-text{ display: none; }
+.listen-pill.is-dot .listen-dot{ width: 9px; height: 9px; animation-duration: 2.4s; }

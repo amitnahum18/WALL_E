@@ -137,7 +137,7 @@
             ? { path: cfg.customPath, label: cfg.customLabel }
             : { builtin: cfg.keyword },
           sensitivity: cfg.sensitivity,
-          onWake: () => this._onWake(''),
+          onWake: () => this._onWake(),
         });
         if (this._stale(gen)) { await WAKE.release(); return; }
         this._armedFlag = true;
@@ -168,11 +168,34 @@
         PHRASE.start({
           phrases,
           lang: cfg.lang,
-          onWake: (rest) => this._onWake(rest),
+          silenceMs: cfg.silenceMs,
+          onWake: () => {
+            this.metrics.detections++;
+            this._wokeAt = performance.now();
+            this.metrics.wakeMs = 0;               // no handoff: the turn is already running
+            this.interim = '';
+            this._emit({ type: 'wake' });
+            if (cfg.beep) beep();
+            this._set('listen');
+          },
           onHeard: (text) => {
             if (text === '__denied__') { this._fail('NO_MIC', 'Microphone permission was denied.'); return; }
             this.heard = text;
             this._emit({ type: 'heard', text });
+          },
+          onCommandInterim: (text) => {
+            this.interim = text;
+            this._emit({ type: 'interim', text });
+          },
+          onCommand: (text) => {
+            const ms = this._wokeAt ? Math.round(performance.now() - this._wokeAt) : 0;
+            this.interim = '';
+            this.heard = '';
+            if (text) {
+              this.metrics.sttMs = ms;
+              this._commit({ at: Date.now(), text, via: 'wake', sttMs: ms, wakeMs: 0 });
+            }
+            this._set(PHRASE.running ? 'wake' : 'idle');
           },
         });
         this._armedFlag = true;
@@ -194,22 +217,15 @@
       this._set('idle');
     },
 
-    _onWake(rest) {
+    /* Porcupine only. Phrase mode never gets here: it hears the name inside
+       a session that is already transcribing, and keeps that session for the
+       command rather than handing the microphone to a second recogniser. */
+    _onWake() {
       if (this.state !== 'wake') return;          // deaf while a command is running
       this.metrics.detections++;
       this._wokeAt = performance.now();
       this._emit({ type: 'wake' });
       if (cfg.beep) beep();
-
-      /* "hi walle what's on tomorrow" arrives as one utterance — the command
-         is already in hand, so there is nothing left to listen for. */
-      if (rest && rest.split(' ').length >= 2) {
-        this.metrics.wakeMs = Math.round(performance.now() - this._wokeAt);
-        this._commit({ at: Date.now(), text: rest, via: 'wake', sttMs: 0, wakeMs: this.metrics.wakeMs });
-        this._set('listen');                      // brief, just so the orb flashes
-        setTimeout(() => this._resume(), 400);
-        return;
-      }
       this._listen('wake');
     },
 
@@ -270,6 +286,7 @@
 
     stopListening() {
       if (this._stt) this._stt.stop();             // keep whatever was heard
+      if (PHRASE.capturing) PHRASE.finish();
     },
 
     _commit(entry) {
