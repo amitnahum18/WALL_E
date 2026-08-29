@@ -1,0 +1,82 @@
+/* ===========================================================
+   bundle.css — only loaded by the single-file build.
+   Refines the studio chrome and makes the shell layout robust
+   at any window size. The phone itself is untouched.
+
+   Deliberately single-theme: a device stage is dark so the phone
+   screen reads as the light source in the room. Every colour is
+   painted explicitly, so the page holds on any host background.
+   =========================================================== */
+
+:root{
+  color-scheme: dark;
+  --bg:     #0d0f13;   /* near-black, biased slightly blue */
+  --bg-2:   #171a20;
+  --line:   #272c35;
+  --text:   #e6e9f0;
+  --muted:  #828b9c;
+  --accent: #6ea8fe;
+  --mono: "JetBrains Mono", ui-monospace, "Cascadia Mono", Consolas, monospace;
+}
+
+body{
+  background:
+    radial-gradient(1100px 620px at 50% -12%, #1e232c 0%, transparent 70%),
+    var(--bg);
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+}
+
+/* the toolbar sizes itself and the stage takes the rest —
+   more robust than a fixed height the stage subtracts */
+.toolbar{
+  flex: none;
+  height: auto;
+  min-height: 52px;
+  flex-wrap: wrap;
+  row-gap: 8px;
+  padding: 9px 16px;
+  overflow: visible;
+  background: rgba(13,15,19,.9);
+}
+.stage{
+  flex: 1 1 auto;
+  min-height: 0;
+  height: auto;
+}
+
+.brand{
+  font-family: var(--mono);
+  font-weight: 500;
+  font-size: 12.5px;
+  letter-spacing: -.2px;
+}
+
+.hint{
+  margin: 0;
+  margin-inline-start: auto;
+  color: var(--muted);
+  font-size: 12px;
+  white-space: nowrap;
+}
+@media (max-width: 720px){ .hint{ display: none; } }
+
+.readout{
+  font-family: var(--mono);
+  font-size: 10.5px;
+  letter-spacing: -.1px;
+}
+
+/* visible keyboard focus — the toolbar is fully operable without a mouse */
+.btn:focus-visible,
+select:focus-visible,
+.ctl.toggle:focus-within{
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+
+@media (prefers-reduced-motion: reduce){
+  .scaler{ transition: none; }
+  .device{ transition: none; }
+}

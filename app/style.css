@@ -1,0 +1,158 @@
+/* ===========================================================
+   iPhone home screen.
+   --sat / --sab / --sal / --sar come from the simulator
+   and describe the device's safe areas.
+   =========================================================== */
+
+*{ box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+
+html, body{ height: 100%; overflow: hidden; }
+
+body{
+  margin: 0;
+  color: #fff;
+  font: 15px/1.4 -apple-system, "SF Pro Text", "Segoe UI", system-ui, sans-serif;
+  -webkit-font-smoothing: antialiased;
+  user-select: none;
+}
+
+/* ---------- Wallpaper ---------- */
+.wallpaper{
+  position: fixed; inset: 0; z-index: 0;
+  background:
+    radial-gradient(58% 42% at 22% 18%, #4a3aa8 0%, transparent 62%),
+    radial-gradient(52% 38% at 84% 30%, #a8347c 0%, transparent 60%),
+    radial-gradient(64% 46% at 50% 96%, #1b64c4 0%, transparent 66%),
+    linear-gradient(168deg, #221a4a 0%, #14102e 46%, #0a0a18 100%);
+}
+.wallpaper::after{
+  content: ""; position: absolute; inset: 0;
+  background: radial-gradient(120% 78% at 50% 0%, transparent 42%, rgba(0,0,0,.42) 100%);
+}
+
+/* ---------- Springboard ---------- */
+.springboard{
+  position: fixed; inset: 0; z-index: 1;
+  display: flex; flex-direction: column;
+  padding-top: calc(var(--sat) + 10px);
+  padding-bottom: var(--sab);
+  transition: transform .32s cubic-bezier(.2,.8,.2,1), opacity .32s;
+}
+body.app-open .springboard{ transform: scale(.94); opacity: 0; pointer-events: none; }
+
+/* Horizontal pager */
+.pages{
+  flex: 1 1 auto; min-height: 0;
+  display: flex;
+  overflow-x: auto; overflow-y: hidden;
+  scroll-snap-type: x mandatory;
+}
+.page{
+  flex: 0 0 100%; scroll-snap-align: center;
+  padding-inline: calc(var(--sal) + 20px) calc(var(--sar) + 20px);
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(84px, 1fr));
+  align-content: start;
+  row-gap: 20px;
+  padding-top: 8px;
+}
+
+/* ---------- App icon ---------- */
+.app{
+  display: flex; flex-direction: column; align-items: center; gap: 6px;
+  background: none; border: 0; padding: 0; color: inherit;
+  font: inherit; cursor: pointer;
+}
+.icon{
+  width: 60px; height: 60px; border-radius: 22.5%;
+  display: grid; place-items: center;
+  box-shadow: 0 1px 2px rgba(0,0,0,.35), inset 0 .5px 0 rgba(255,255,255,.28);
+  transition: transform .12s ease;
+}
+.app:active .icon{ transform: scale(.9); }
+.icon svg{ width: 62%; height: 62%; overflow: visible; }
+.icon svg.stroke{ fill: none; stroke: var(--fg,#fff); stroke-width: 1.7;
+                  stroke-linecap: round; stroke-linejoin: round; }
+.icon svg.fill{ fill: var(--fg,#fff); stroke: none; }
+.label{
+  font-size: 11px; line-height: 1.2; letter-spacing: .1px;
+  text-shadow: 0 1px 3px rgba(0,0,0,.55);
+  max-width: 74px; text-align: center;
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+}
+
+/* ---------- Page dots ---------- */
+.dots{ display: flex; justify-content: center; gap: 7px; height: 18px; align-items: center; }
+.dots i{
+  width: 7px; height: 7px; border-radius: 50%;
+  background: rgba(255,255,255,.38); transition: background .2s;
+}
+.dots i.on{ background: #fff; }
+
+/* ---------- Search pill ---------- */
+.search-pill{
+  align-self: center;
+  display: flex; align-items: center; gap: 5px;
+  margin: 4px 0 10px;
+  padding: 6px 13px 6px 11px;
+  border: 0; border-radius: 999px;
+  background: rgba(255,255,255,.16);
+  backdrop-filter: blur(14px);
+  color: #fff; font: 600 13px/1 inherit; cursor: pointer;
+}
+.search-pill svg{ width: 13px; height: 13px; fill: none; stroke: #fff;
+                  stroke-width: 2.2; stroke-linecap: round; }
+.search-pill:active{ background: rgba(255,255,255,.28); }
+
+/* ---------- Dock ---------- */
+.dock{ padding-inline: calc(var(--sal) + 10px) calc(var(--sar) + 10px); }
+.dock-row{
+  display: flex; justify-content: space-around; align-items: center;
+  padding: 12px 8px;
+  border-radius: 34px;
+  background: rgba(255,255,255,.14);
+  backdrop-filter: blur(22px) saturate(150%);
+  box-shadow: inset 0 0 0 .5px rgba(255,255,255,.16);
+}
+.dock .label{ display: none; }
+
+/* ---------- Custom icons ---------- */
+.icon.calendar{ background: #fff; display: flex; flex-direction: column;
+                align-items: center; justify-content: flex-start; }
+.icon.calendar .cal-dow{ color: #ff3b30; font: 700 10px/1 inherit; letter-spacing: .6px; margin-top: 7px; }
+.icon.calendar .cal-day{ color: #1c1c1e; font: 300 30px/1 inherit; margin-top: 1px; }
+
+.icon.photos{ background: #fff; }
+.icon.clock{ background: #000; }
+.icon.reminders{ background: linear-gradient(#ffffff,#f2f2f5); }
+
+/* ===========================================================
+   An opened app
+   =========================================================== */
+.app-view{
+  position: fixed; inset: 0; z-index: 5;
+  background: #f2f2f7; color: #1c1c1e;
+  display: flex; flex-direction: column;
+  transform-origin: top left;
+  overflow: hidden;
+}
+.app-view[hidden]{ display: none; }
+/* the swipe-up-to-close strip along the home indicator */
+.close-zone{
+  position: absolute; bottom: 0; left: 0; right: 0;
+  height: calc(var(--sab) + 8px);
+  cursor: grab;
+}
+
+/* ---------- one-time hint ---------- */
+.toast{
+  position: fixed; z-index: 30;
+  left: 50%; transform: translateX(-50%);
+  bottom: calc(var(--sab) + 22px);
+  padding: 9px 16px; border-radius: 999px;
+  background: rgba(0,0,0,.72); backdrop-filter: blur(10px);
+  color: #fff; font-size: 13px; white-space: nowrap;
+  animation: toast-in .3s ease-out;
+}
+.toast[hidden]{ display: none; }
+@keyframes toast-in{ from{ opacity: 0; transform: translate(-50%, 10px); } }

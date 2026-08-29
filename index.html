@@ -1,0 +1,85 @@
+<!doctype html>
+<html lang="he" dir="rtl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>WALL·E — סימולטור מכשיר</title>
+<link rel="stylesheet" href="simulator/frame.css">
+</head>
+<body>
+
+<header class="toolbar">
+  <div class="brand">
+    <span class="dot"></span>
+    <span>Device Simulator</span>
+  </div>
+
+  <div class="group">
+    <label class="ctl">
+      <span>מכשיר</span>
+      <select id="device"></select>
+    </label>
+
+    <label class="ctl">
+      <span>זום</span>
+      <select id="zoom">
+        <option value="fit">התאם</option>
+        <option value="1">100%</option>
+        <option value="0.85">85%</option>
+        <option value="0.75">75%</option>
+        <option value="0.6">60%</option>
+        <option value="0.5">50%</option>
+      </select>
+    </label>
+  </div>
+
+  <div class="group">
+    <button id="rotate" class="btn" title="סיבוב (Ctrl+←/→)">⟳ סיבוב</button>
+    <button id="theme"  class="btn" title="מצב כהה/בהיר">◐ ערכה</button>
+    <button id="reload" class="btn" title="רענון (R)">↻ רענון</button>
+    <label class="ctl toggle" title="רענון אוטומטי בכל חזרה לחלון הדפדפן – נוח בזמן כתיבת קוד">
+      <input type="checkbox" id="live"><span>Live</span>
+    </label>
+  </div>
+
+  <div class="group grow">
+    <input id="url" class="url" value="app/index.html" spellcheck="false"
+           title="הנתיב שנטען בתוך המכשיר – אפשר להחליף לכל קובץ או כתובת">
+    <button id="go" class="btn">טען</button>
+    <button id="open" class="btn ghost" title="פתח בכרטיסייה חדשה">↗</button>
+  </div>
+</header>
+
+<main class="stage" id="stage">
+  <div class="scaler" id="scaler">
+    <div class="device" id="deviceEl">
+      <div class="buttons">
+        <i class="btn-silent"></i><i class="btn-vol-up"></i>
+        <i class="btn-vol-dn"></i><i class="btn-power"></i>
+      </div>
+
+      <div class="screen" id="screen">
+        <iframe id="frame" title="app" src="app/index.html" allow="microphone"></iframe>
+
+        <!-- שכבות תצוגה: לא חוסמות לחיצות -->
+        <div class="chrome" id="chrome">
+          <div class="cutout" id="cutout"></div>
+          <div class="statusbar" id="statusbar">
+            <span class="sb-time" id="clock">9:41</span>
+            <span class="sb-icons" id="sbIcons"></span>
+          </div>
+          <div class="indicator" id="indicator"></div>
+        </div>
+      </div>
+
+      <div class="homebutton" id="homebutton"></div>
+    </div>
+  </div>
+
+  <div class="readout" id="readout"></div>
+</main>
+
+<script src="simulator/devices.js"></script>
+<script src="simulator/sim.js"></script>
+</body>
+</html>

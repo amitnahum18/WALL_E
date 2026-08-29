@@ -1,0 +1,194 @@
+/* ===== מעטפת הסימולטור ===== */
+:root{
+  --bg: #14161a;
+  --bg-2: #1c1f26;
+  --line: #2b303a;
+  --text: #e6e9ef;
+  --muted: #8b93a3;
+  --accent: #6ea8fe;
+  --toolbar-h: 52px;
+}
+
+*{ box-sizing: border-box; }
+
+html, body{ height: 100%; }
+body{
+  margin: 0;
+  background:
+    radial-gradient(1200px 700px at 50% -10%, #232833 0%, transparent 70%),
+    var(--bg);
+  color: var(--text);
+  font: 13px/1.45 "Segoe UI", system-ui, -apple-system, sans-serif;
+  overflow: hidden;
+}
+
+/* ---------- סרגל כלים ---------- */
+.toolbar{
+  height: var(--toolbar-h);
+  display: flex; align-items: center; gap: 14px;
+  padding: 0 14px;
+  background: rgba(20,22,26,.85);
+  backdrop-filter: blur(12px);
+  border-bottom: 1px solid var(--line);
+  position: relative; z-index: 10;
+  overflow-x: auto; overflow-y: hidden;
+}
+.brand{ display:flex; align-items:center; gap:8px; font-weight:600; letter-spacing:.2px; }
+.brand .dot{
+  width:9px; height:9px; border-radius:50%;
+  background: var(--accent);
+  box-shadow: 0 0 10px var(--accent);
+}
+.group{ display:flex; align-items:center; gap:8px; }
+.group.grow{ flex:1; min-width:160px; }
+
+.ctl{ display:flex; align-items:center; gap:6px; color: var(--muted); white-space: nowrap; }
+.ctl.toggle{ cursor:pointer; user-select:none; }
+.ctl input[type=checkbox]{ accent-color: var(--accent); }
+
+select, .url{
+  background: var(--bg-2);
+  color: var(--text);
+  border: 1px solid var(--line);
+  border-radius: 7px;
+  padding: 6px 8px;
+  font: inherit;
+  outline: none;
+}
+select:focus, .url:focus{ border-color: var(--accent); }
+.url{ width:100%; direction: ltr; text-align: left; font-family: ui-monospace, Consolas, monospace; font-size:12px; }
+
+.btn{
+  background: var(--bg-2);
+  color: var(--text);
+  border: 1px solid var(--line);
+  border-radius: 7px;
+  padding: 6px 11px;
+  font: inherit;
+  cursor: pointer;
+  white-space: nowrap;
+  transition: background .12s, border-color .12s;
+}
+.btn:hover{ background:#252a33; border-color:#3a4150; }
+.btn:active{ transform: translateY(1px); }
+.btn.ghost{ background: transparent; }
+.btn.on{ border-color: var(--accent); color: var(--accent); }
+
+/* ---------- הבמה ---------- */
+.stage{
+  height: calc(100% - var(--toolbar-h));
+  display: grid;
+  place-items: center;
+  position: relative;
+  overflow: auto;
+  padding: 24px;
+}
+.scaler{ transform-origin: center center; transition: transform .18s ease; }
+
+.readout{
+  position: absolute; bottom: 10px; inset-inline-start: 14px;
+  color: var(--muted); font-family: ui-monospace, Consolas, monospace; font-size: 11px;
+  direction: ltr; pointer-events: none;
+}
+
+/* ---------- גוף המכשיר ---------- */
+.device{
+  --w: 393px; --h: 852px; --bezel: 12px; --radius: 55px;
+  position: relative;
+  width: calc(var(--w) + var(--bezel) * 2);
+  height: calc(var(--h) + var(--bezel) * 2 + var(--chin, 0px));
+  padding: var(--bezel);
+  padding-bottom: calc(var(--bezel) + var(--chin, 0px));
+  border-radius: var(--radius);
+  background: linear-gradient(155deg, #3a3f49 0%, #22252c 40%, #15171b 100%);
+  box-shadow:
+    0 0 0 2px #0c0e11,
+    0 30px 70px -20px rgba(0,0,0,.85),
+    inset 0 1px 1px rgba(255,255,255,.16);
+  transition: width .2s, height .2s, border-radius .2s;
+}
+
+/* כפתורים פיזיים בצדדים */
+.buttons i{
+  position: absolute; background: #2a2e36; border-radius: 2px;
+  box-shadow: inset 0 0 2px rgba(0,0,0,.6);
+}
+.buttons .btn-silent{ inset-inline-start:-2px; top: 105px; width:3px; height:26px; }
+.buttons .btn-vol-up{ inset-inline-start:-2px; top: 150px; width:3px; height:52px; }
+.buttons .btn-vol-dn{ inset-inline-start:-2px; top: 215px; width:3px; height:52px; }
+.buttons .btn-power { inset-inline-end:-2px;   top: 175px; width:3px; height:78px; }
+.device[data-orientation="landscape"] .buttons{ display:none; }
+
+/* ---------- המסך ---------- */
+.screen{
+  position: relative;
+  width: var(--w); height: var(--h);
+  border-radius: calc(var(--radius) - var(--bezel) + 2px);
+  overflow: hidden;
+  background: #fff;
+  isolation: isolate;
+}
+.screen iframe{
+  width: 100%; height: 100%;
+  border: 0; display: block;
+  background: transparent;
+}
+
+/* שכבות ה-UI של מערכת ההפעלה */
+.chrome{ position:absolute; inset:0; pointer-events:none; z-index: 2; }
+
+/* מגרעת / נאטש / חור */
+.cutout{ position:absolute; top:0; left:50%; transform:translateX(-50%); background:#000; }
+.device[data-notch="island"] .cutout{ top:11px; width:125px; height:36px; border-radius:20px; }
+.device[data-notch="notch"]  .cutout{ width:160px; height:30px; border-radius:0 0 18px 18px; }
+.device[data-notch="hole"]   .cutout{
+  top:10px; left:auto; right:14px; transform:none;
+  width:11px; height:11px; border-radius:50%;
+  box-shadow: 0 0 0 2px rgba(0,0,0,.35);
+}
+.device[data-notch="none"] .cutout{ display:none; }
+.device[data-orientation="landscape"] .cutout{ display:none; }
+
+/* שורת סטטוס */
+.statusbar{
+  position:absolute; top:0; left:0; right:0;
+  height: var(--sb-h, 44px);
+  display:flex; align-items:center; justify-content:space-between;
+  direction: ltr;
+  padding: 0 22px;
+  font: 600 13px/1 -apple-system, "Segoe UI", system-ui, sans-serif;
+  color: var(--sb-fg, #000);
+  letter-spacing: .1px;
+}
+.device[data-platform="android"] .statusbar{
+  padding: 0 14px; font-size:12px; font-weight:500; height: var(--sb-h, 30px);
+}
+.device[data-platform="android"] .sb-time{ order:-1; }
+.sb-icons{ display:flex; align-items:center; gap:5px; }
+.sb-icons svg{ display:block; }
+
+/* פס הבית / ניווט */
+.indicator{ position:absolute; bottom:0; left:0; right:0; display:flex; justify-content:center; align-items:center; }
+.device[data-indicator="ios"] .indicator{ height:34px; }
+.device[data-indicator="ios"] .indicator::after{
+  content:""; width:140px; height:5px; border-radius:3px;
+  background: var(--sb-fg, #000); opacity:.85;
+}
+.device[data-indicator="android"] .indicator{ height:24px; }
+.device[data-indicator="android"] .indicator::after{
+  content:""; width:108px; height:4px; border-radius:2px;
+  background: var(--sb-fg, #000); opacity:.7;
+}
+.device[data-indicator="none"] .indicator{ display:none; }
+
+/* כפתור בית פיזי (iPhone SE) */
+.homebutton{ display:none; }
+.device[data-home="true"] .homebutton{
+  display:block;
+  position:absolute; bottom: 12px; left:50%; transform:translateX(-50%);
+  width:42px; height:42px; border-radius:50%;
+  background: #1b1e24;
+  box-shadow: inset 0 0 0 1.5px #3a4049, 0 1px 2px rgba(0,0,0,.5);
+}
+
+.ctl.toggle.on{ color: var(--accent); }

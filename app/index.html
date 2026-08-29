@@ -1,0 +1,68 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>iPhone Home Screen</title>
+<link rel="stylesheet" href="style.css">
+<link rel="stylesheet" href="ui.css">
+<link rel="stylesheet" href="screens.css">
+</head>
+<body>
+
+<!-- ===== Wallpaper ===== -->
+<div class="wallpaper"></div>
+
+<!-- ===== Home screen ===== -->
+<div class="springboard" id="springboard">
+
+  <div class="pages" id="pages"><!-- app pages are built in main.js --></div>
+
+  <div class="dots" id="dots"></div>
+
+  <button class="search-pill" id="searchPill">
+    <svg viewBox="0 0 24 24"><circle cx="11" cy="11" r="6.5"/><path d="m19.5 19.5-3.7-3.7"/></svg>
+    <span>Search</span>
+  </button>
+
+  <div class="dock"><div class="dock-row" id="dock"></div></div>
+</div>
+
+<!-- ===== An opened app ===== -->
+<section class="app-view" id="appView" hidden>
+  <div class="nav-host" id="navHost"></div>
+  <div class="close-zone" id="closeZone" title="Swipe up to close"></div>
+</section>
+
+<div class="toast" id="toast" hidden>Swipe up from the bottom edge to go home</div>
+
+<script src="sim-bridge.js"></script>
+<script src="ui.js"></script>
+<script src="apps.js"></script>
+
+<!-- WALL·E voice pipeline: Porcupine runs the wake word on-device in WASM -->
+<script src="https://cdn.jsdelivr.net/npm/@picovoice/web-voice-processor@4.0.10/dist/iife/index.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/@picovoice/porcupine-web@4.0.1/dist/iife/index.min.js"></script>
+<script src="voice/stt.js"></script>
+<script src="voice/wake.js"></script>
+<script src="voice/engine.js"></script>
+
+<!-- one file per working app -->
+<script src="screens/settings.js"></script>
+<script src="screens/messages.js"></script>
+<script src="screens/calculator.js"></script>
+<script src="screens/weather.js"></script>
+<script src="screens/photos.js"></script>
+<script src="screens/clock.js"></script>
+<script src="screens/notes.js"></script>
+<script src="screens/phone.js"></script>
+<script src="screens/mail.js"></script>
+<script src="screens/calendar.js"></script>
+<script src="screens/music.js"></script>
+<script src="screens/maps.js"></script>
+<script src="screens/social.js"></script>
+<script src="screens/walle.js"></script>
+
+<script src="main.js"></script>
+</body>
+</html>
