@@ -43,6 +43,7 @@ const appJs = [
   read('app', 'voice', 'wake.js'),
   read('app', 'voice', 'phrase.js'),
   read('app', 'voice', 'screen.js'),
+  read('app', 'voice', 'agent.js'),
   read('app', 'voice', 'engine.js'),
   read('app', 'voice', 'indicator.js'),
   read('app', 'screens', 'settings.js'),

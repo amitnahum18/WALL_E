@@ -31,6 +31,8 @@
     beep: true,
     captureScreen: false,           // grab what was on screen when the name landed
     maxShots: 4,                    // per command, kept only when the screen changes
+    askAgent: false,                // send finished commands to the reasoning graph
+    agentUrl: 'http://127.0.0.1:8077',
   };
 
   const MAX_ENTRIES = 8;            // entries whose frames are still held
@@ -356,6 +358,36 @@
       UI.save('walle.log', this.log);
       UI.save('walle.metrics', this.metrics);
       this._emit({ type: 'final', entry });
+
+      this._ask(entry);
+    },
+
+    /* Hand the command to the graph. Deliberately not awaited by anything:
+       the transcript is already saved and useful, and a graph that is slow,
+       unreachable, or not running must not hold up the next wake word. */
+    async _ask(entry) {
+      if (!cfg.askAgent || !entry.text) return;
+
+      AGENT.url = cfg.agentUrl;
+      entry.thinking = true;
+      this._emit({ type: 'answered', entry });
+
+      const shots = this.frames.get(entry.id) || [];
+      try {
+        const out = await AGENT.ask({
+          text: entry.text,
+          screens: shots.map((s) => s.dataUrl),
+          currentApp: window.currentAppName || null,
+        });
+        entry.answer = out.answer || '';
+        entry.decision = out.decision ? out.decision.type : null;
+      } catch (e) {
+        entry.answerError = String((e && e.message) || e);
+      }
+
+      entry.thinking = false;
+      UI.save('walle.log', this.log);
+      this._emit({ type: 'answered', entry });
     },
 
     /* Chrome keeps the microphone for a moment after recognition ends;

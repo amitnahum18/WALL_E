@@ -160,6 +160,37 @@
             UI.row({ label: 'Beep on wake', right: UI.switchEl(c.beep, (on) => E().setConfig({ beep: on })) }),
           ]));
 
+          /* the reasoning graph, which lives in a separate process */
+          const url = UI.el('input', 'walle-input walle-input-wide');
+          url.type = 'text';
+          url.placeholder = 'http://127.0.0.1:8077';
+          url.value = c.agentUrl;
+          url.addEventListener('change', () => E().setConfig({ agentUrl: url.value.trim() }));
+          const urlRow = UI.el('div', 'row walle-slider-row');
+          urlRow.appendChild(url);
+
+          const reach = UI.el('span', 'row-value', 'checking…');
+          AGENT.url = c.agentUrl;
+          AGENT.health().then((h) => {
+            reach.textContent = h.ok
+              ? (h.key ? h.model : 'running, no API key')
+              : h.error;
+          });
+
+          body.appendChild(UI.group([
+            UI.row({
+              label: 'Send commands to the agent',
+              right: UI.switchEl(c.askAgent, (on) => E().setConfig({ askAgent: on })),
+            }),
+            UI.row({ label: 'Agent', right: reach }),
+            urlRow,
+          ], {
+            title: 'AGENT',
+            note: 'The transcript and the frames are posted to the graph, which holds the model ' +
+                  'key in its own process — that key never reaches this page. Start it with ' +
+                  'agent\\run.ps1.',
+          }));
+
           /* what the browser actually gives us */
           const diag = [
             UI.row({ label: 'Secure context', value: window.isSecureContext ? 'yes' : 'no — use serve.ps1' }),
@@ -396,7 +427,12 @@
               })() : null;
 
               const gone = (e.shots || e.frame) && !thumb;
-              return UI.row({
+              const reply = e.thinking ? 'thinking…'
+                          : e.answer ? e.answer
+                          : e.answerError ? 'agent: ' + e.answerError
+                          : '';
+
+              const row = UI.row({
                 strong: true,
                 label: e.text,
                 sub: when(e.at) + '  ·  ' + (e.via === 'wake' ? 'wake word' : 'push to talk') +
@@ -407,6 +443,13 @@
                 chevron: false,
                 onTap: thumb ? () => viewShots(nav, e, shots) : null,
               });
+
+              if (reply) {
+                const bubble = UI.el('div', 'walle-reply' +
+                  (e.thinking ? ' thinking' : e.answerError ? ' bad' : ''), reply);
+                row.querySelector('.row-main').appendChild(bubble);
+              }
+              return row;
             }), { title: 'TRANSCRIPTS', note: engine.log.length + ' transcripts, newest first' }));
           };
 
@@ -445,6 +488,7 @@
               return;
             }
             if (ev.type === 'final') { paintLog(); paintMetrics(); paintState(); return; }
+            if (ev.type === 'answered') { paintLog(); return; }
             if (ev.type === 'metrics') { paintMetrics(); paintLog(); return; }
             paintState();
             if (ev.type === 'config') { paintMetrics(); buildListener(); paintListener(); }

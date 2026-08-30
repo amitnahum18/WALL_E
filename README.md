@@ -52,8 +52,8 @@ dragging from the left edge to go back.
 
 ## WALL·E — wake word, microphone, transcript
 
-Stage one of the voice assistant. The pipeline stops at text on screen: no
-screen capture, no agent, no LLM.
+Stage one of the voice assistant. On its own the pipeline stops at text on
+screen — the agent that reads that text is a separate process, below.
 
 ```
 "blah blah..."        → nothing. Porcupine listens only for the name,
@@ -344,3 +344,59 @@ In [simulator/devices.js](simulator/devices.js):
   safe: { top: 32, bottom: 24 },
   homeIndicator: true }
 ```
+
+## The agent
+
+Stage one stopped at text on screen. The agent is what reads it.
+
+```powershell
+copy agent\.env.example agent\.env     # then put your OpenRouter key in it
+.\agent\run.ps1                        # http://127.0.0.1:8077
+```
+
+Then in WALL·E → Settings → AGENT, turn on **Send commands to the agent**. The
+row above the switch says whether the graph is reachable and which model it is
+using. Finished commands are posted to it with their frames, and the answer
+appears under the transcript.
+
+### Why a server
+
+The model key lives in the Python process and never reaches the page. That is
+the only reason this is a server rather than a `fetch` from the browser: a key
+in front-end code is a key you have given away. The bridge is deliberately
+one-way and best-effort — the agent being unreachable is a normal state, not an
+error state, and the transcript is kept either way.
+
+CORS is restricted to `localhost` and `127.0.0.1`. A process holding an API key
+should not be reachable from a page on the internet.
+
+### The graph
+
+```
+START → OBSERVE → REASON ─┬→ ANSWER    → END
+                          ├→ ASK_USER  → END
+                          ├→ DELEGATE  → END
+                          └→ EXECUTE → AFTER_ACTION ─┬→ OBSERVE (loop)
+                                                     └→ ANSWER → END
+```
+
+The loop is the point. A chatbot answers once; an agent looks, decides, acts,
+and looks again at what its action did. Keeping that shape from the start means
+the automation, research and verification agents drop in later as sub-graphs
+behind `delegate` without the core changing.
+
+`execute_action` is mock on purpose: it records what the model asked for and
+hands it back. Nothing in the graph can touch a device. Real device control is
+a separate layer with its own permission model, and wiring it in before the
+loop is trustworthy would be the wrong order.
+
+### Tests
+
+```powershell
+python agent\test_agent.py     # the graph, against a stubbed model
+python agent\test_server.py    # the HTTP surface the phone calls
+```
+
+Both run with no key and no network. They cover the routing, the action loop,
+the iteration ceiling, the JSON parsing that decides whether any of it happens,
+and the CORS rules.

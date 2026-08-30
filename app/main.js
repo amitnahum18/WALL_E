@@ -194,6 +194,7 @@ function openApp(app, iconBox) {
   hostEl.innerHTML = '';
   nav = new Nav(hostEl);
 
+  window.currentAppName = app.name;        // the agent wants to know where it is
   const mod = SCREENS[app.name] || genericScreen(app);
   currentBar = resolveBar(mod.statusBar);
   ctx.setStatusBar(currentBar);
@@ -213,6 +214,7 @@ function openApp(app, iconBox) {
 function closeApp() {
   if (!isOpen) return;
   isOpen = false;
+  window.currentAppName = 'Home Screen';
 
   hostEl.querySelectorAll('.screen').forEach((s) =>
     s.dispatchEvent(new CustomEvent('screen:teardown')));
