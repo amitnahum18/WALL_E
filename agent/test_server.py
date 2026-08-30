@@ -63,6 +63,31 @@ check("the screenshot was forwarded",
 check("the app name was forwarded", "Calculator" in parts[0]["text"], True)
 
 # ------------------------------------------------------------
+# Which screen the user ended up on is often the whole answer, so the
+# frames go over labelled and in order rather than as a bare pile.
+stub = StubLLM('{"type":"answer","answer":"It is 24 degrees."}')
+wa.set_llm(stub)
+client.post("/ask", json={
+    "text": "what is the weather",
+    "screens": ["data:image/jpeg;base64,AAAA",
+                "data:image/jpeg;base64,BBBB",
+                "data:image/jpeg;base64,CCCC"],
+})
+
+parts = stub.calls[0][1]["content"]
+labels = [p["text"] for p in parts if p.get("type") == "text"][1:]
+images = [p["image_url"]["url"] for p in parts if p.get("type") == "image_url"]
+
+check("every screenshot is labelled", len(labels), 3)
+check("frames keep their order", images[-1].endswith("CCCC"), True)
+check("the first is named as where they started",
+      "started speaking" in labels[0], True)
+check("the last is named as where they are now",
+      "on now" in labels[-1], True)
+check("a label sits before its image",
+      parts.index(next(p for p in parts if p.get("type") == "image_url")) > 1, True)
+
+# ------------------------------------------------------------
 # a request with no screens is normal, not an error
 wa.set_llm(StubLLM('{"type":"answer","answer":"I cannot see your screen."}'))
 res = client.post("/ask", json={"text": "what is on my screen"})

@@ -117,10 +117,20 @@ Put a local copy in `app/voice/models/` and it will be preferred.
 
 Turning on SCREEN → **Capture on wake** opens a screen share once and holds it.
 A frame is pulled the instant the name is heard — before the screen has reacted
-to anything — and then again during the command, but only when the screen
-actually changes. Someone asking a long question may scroll to the thing they
-are asking about halfway through. Tap a transcript to see the frames it was
-said against.
+to anything — and then again whenever the screen changes, right through the
+command and for about two seconds after it ends. Tap a transcript to see the
+frames it was said against.
+
+That tail is not padding. "Hi WALL·E, what's the weather" is very often said
+on the way to the weather, and the screen being asked about arrives *after* the
+sentence does. Stopping the capture with the speech recorded the screen the
+user was leaving and nothing else, which is exactly the screen the question was
+not about. The pill says "Thinking…" for the whole settle, because it is true —
+the question is already in flight.
+
+For the same reason, when there are more frames than FRAMES PER COMMAND allows
+it is the middle that goes. The first frame is where the question started and
+the newest is where it landed; the newest is never the one dropped.
 
 This is deliberately not a recording, and deliberately not a frame rate. Three
 frames a second across a ten second question is thirty images, which is thirty

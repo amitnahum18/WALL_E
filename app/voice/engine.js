@@ -38,6 +38,7 @@
   const MAX_ENTRIES = 8;            // entries whose frames are still held
   const SAMPLE_MS = 320;            // ~3 looks a second, cheap; keeping is what costs
   const CHANGE = 0.045;             // signature distance that counts as a new scene
+  const TAIL_MS = 2200;             // keep watching after the sentence ends
 
   const cfg = Object.assign({}, DEFAULTS, UI.store('walle.cfg', {}));
 
@@ -309,32 +310,48 @@
       if (PHRASE.capturing) PHRASE.finish();
     },
 
-    /* The screen as it was when the name was heard — and then, while the
-       command is still being spoken, again whenever it stops looking like
-       that. Someone asking a long question may scroll to the thing they
-       are asking about halfway through. */
+    /* The screen as it was when the name was heard — and then again
+       whenever it stops looking like that, right through the sentence and
+       for a moment after it. The tail is the point: "what's the weather"
+       is very often said on the way to the weather, and the screen you
+       were reaching for arrives after you have stopped talking. Ending
+       the capture with the speech would record the screen you were
+       leaving and nothing else. */
     _snap() {
       this._shots = [];
-      clearInterval(this._sampler);
-      this._sampler = null;
+      this._stopSampling();
       if (!cfg.captureScreen || !SCREEN.active) return;
 
       const first = SCREEN.grab();
       if (!first) return;
       this._shots.push(first);
 
-      this._sampler = setInterval(() => {
-        if (this.state !== 'listen' || this._shots.length >= cfg.maxShots) return;
-        /* the cheap half runs every tick; the expensive half almost never */
-        const sig = SCREEN.peek();
-        const last = this._shots[this._shots.length - 1];
-        if (!sig || SCREEN.diff(sig, last.sig) < CHANGE) return;
-        const shot = SCREEN.grab();
-        if (shot) this._shots.push(shot);
-      }, SAMPLE_MS);
+      this._sampling = true;
+      this._sampler = setInterval(() => this._look(), SAMPLE_MS);
+    },
+
+    /* the cheap half runs every tick; the expensive half only when the
+       picture actually moved */
+    _look() {
+      if (!this._sampling || !this._shots.length) return;
+      const sig = SCREEN.peek();
+      const last = this._shots[this._shots.length - 1];
+      if (!sig || SCREEN.diff(sig, last.sig) < CHANGE) return;
+      const shot = SCREEN.grab();
+      if (shot) this._keep(shot);
+    },
+
+    /* Over the cap it is the middle that goes. The first frame is where
+       you started and the newest is where you ended up; those two carry
+       the question between them, and the newest must never be the one
+       dropped because it is usually the one being asked about. */
+    _keep(shot) {
+      this._shots.push(shot);
+      while (this._shots.length > Math.max(1, cfg.maxShots)) this._shots.splice(1, 1);
     },
 
     _stopSampling() {
+      this._sampling = false;
       clearInterval(this._sampler);
       this._sampler = null;
     },
@@ -342,7 +359,31 @@
     _commit(entry) {
       entry.id = entry.at + '-' + Math.random().toString(36).slice(2, 6);
 
+      this.log.unshift(entry);
+      this.log = this.log.slice(0, 50);
+      UI.save('walle.log', this.log);
+      UI.save('walle.metrics', this.metrics);
+      this._emit({ type: 'final', entry });   // the words, straight away
+
+      this._settle(entry);                     // the pictures, a moment later
+    },
+
+    /* The transcript is already on screen; this is the short wait for the
+       screen to catch up with the sentence. The pill says "Thinking…" for
+       the whole of it, which is true — the question is in flight. */
+    async _settle(entry) {
+      const asking = cfg.askAgent && !!entry.text;
+      if (asking) {
+        entry.thinking = true;
+        this._emit({ type: 'answered', entry });
+      }
+
+      if (this._sampling) {
+        await new Promise((r) => setTimeout(r, TAIL_MS));
+        this._look();                          // one last look before we stop
+      }
       this._stopSampling();
+
       const shots = this._shots || [];
       this._shots = [];
       if (shots.length) {
@@ -351,13 +392,8 @@
         while (this.frames.size > MAX_ENTRIES) {
           this.frames.delete(this.frames.keys().next().value);
         }
+        this._emit({ type: 'final', entry });  // now the thumbnails exist
       }
-
-      this.log.unshift(entry);
-      this.log = this.log.slice(0, 50);
-      UI.save('walle.log', this.log);
-      UI.save('walle.metrics', this.metrics);
-      this._emit({ type: 'final', entry });
 
       this._ask(entry);
     },
@@ -369,9 +405,6 @@
       if (!cfg.askAgent || !entry.text) return;
 
       AGENT.url = cfg.agentUrl;
-      entry.thinking = true;
-      this._emit({ type: 'answered', entry });
-
       const shots = this.frames.get(entry.id) || [];
       try {
         const out = await AGENT.ask({

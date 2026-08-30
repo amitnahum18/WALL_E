@@ -34,7 +34,11 @@ load_dotenv()
 # ============================================================
 
 OPENROUTER_API_KEY = os.getenv("OPENROUTER_API_KEY")
-OPENROUTER_MODEL = os.getenv("OPENROUTER_MODEL", "openai/gpt-4o-mini")
+# Reading small UI text off a screenshot is the hard part of this job, and
+# the cheap vision models are visibly worse at it — they guess plausible
+# numbers instead of reading the ones that are there. Overridable, but the
+# default should be a model that can actually see.
+OPENROUTER_MODEL = os.getenv("OPENROUTER_MODEL", "openai/gpt-4o")
 MAX_IMAGES = 4          # matches what the phone keeps per command
 
 
@@ -180,8 +184,11 @@ def observe(state: WalleState) -> WalleState:
 SYSTEM_PROMPT = """You are WALL·E, a personal agent running on the user's phone.
 
 You are given what the user said and, usually, one or more screenshots of
-what was on their screen as they said it. The screenshots are in order, and
-the last one is the most recent.
+what was on their screen as they said it. They are in time order and each
+one is labelled. The LAST screenshot is what the user is looking at now:
+people often start a question on one screen and open the right one while
+they finish the sentence, so answer from the last screenshot unless the
+question is plainly about an earlier one.
 
 You may:
   answer    - reply to the user
@@ -190,11 +197,16 @@ You may:
   ask_user  - ask for the one piece of information you are missing
 
 Rules:
+- Read the values straight off the screen. Numbers, names, times and units
+  exactly as they appear — do not round them, translate them or fill in
+  what you expect to be there.
 - Never invent what is on the screen. If the screenshots do not show it,
-  say that plainly.
+  say so and say what you can see instead, so the user knows which screen
+  you were given.
 - Never take a destructive or irreversible action without asking first.
 - Prefer a simple deterministic action over a delegation.
-- Keep answers short. This is spoken, not read.
+- Answer in one or two spoken sentences: the specific values first, then
+  any detail worth adding. This is heard, not read.
 
 Return ONLY a JSON object, no prose around it, matching:
 
@@ -227,8 +239,18 @@ MEMORY:
 IDENTITY:
 {state.get('identity_context') or ''}"""
 
+    # Labelled, because "the last image" is only obvious to us. Which screen
+    # the user ended up on is the whole answer to a question like "what's
+    # the weather", and models do not reliably infer order from position.
     parts: List[Dict[str, Any]] = [{"type": "text", "text": context}]
-    for image in images:
+    for i, image in enumerate(images):
+        last = i == len(images) - 1
+        label = f"SCREENSHOT {i + 1} of {len(images)}"
+        if last:
+            label += " — the screen the user is on now"
+        elif i == 0:
+            label += " — the screen they were on when they started speaking"
+        parts.append({"type": "text", "text": label})
         parts.append({
             "type": "image_url",
             "image_url": {"url": image_data_url(image)},
