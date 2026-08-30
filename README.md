@@ -142,13 +142,22 @@ a reload.
 ### It keeps listening outside the app
 
 Arming the wake word arms the system, not the screen. Close WALL·E and it is
-still listening, so a **blue dot** sits under the status bar saying so — small
-and quiet, the way a phone shows the microphone is live. It opens into a full
-pill only when there is something to say: for a moment when the name is heard,
-and for as long as a command is being captured, where it turns red and shows
-the words as they arrive. Then it shrinks back to a dot. Tapping it opens
-WALL·E. It disappears the moment you turn the switch off, which is the only way
-to stop it.
+still listening, so a pill sits under the status bar saying so. It reads at a
+glance, and it only ever says three things:
+
+| | |
+|---|---|
+| **blue dot, no text** | nothing is happening — armed, waiting for its name |
+| **red, with text** | listening to you, showing the words as they arrive |
+| **blue, with text** | the agent talking back |
+
+Waiting never carries text. If there are words in the pill something is
+happening, and the colour says which of the two it is. An answer stays up long
+enough to read — longer for a longer answer — and is cleared the moment the
+next command starts, because it is no longer the newest thing that happened.
+
+Tapping it opens WALL·E. It disappears the moment you turn the switch off,
+which is the only way to stop it.
 
 ### A command lasts as long as you talk
 
