@@ -37,8 +37,9 @@
 
   const MAX_ENTRIES = 8;            // entries whose frames are still held
   const SAMPLE_MS = 320;            // ~3 looks a second, cheap; keeping is what costs
-  const CHANGE = 0.045;             // signature distance that counts as a new scene
+  const CHANGE = 0.035;             // share of the picture that must move to count
   const TAIL_MS = 2200;             // keep watching after the sentence ends
+  const NAV_SETTLE = 420;           // let the open-app zoom finish before looking
 
   const cfg = Object.assign({}, DEFAULTS, UI.store('walle.cfg', {}));
 
@@ -324,18 +325,34 @@
 
       const first = SCREEN.grab();
       if (!first) return;
-      this._shots.push(first);
-
+      this._navAt = 0;
       this._sampling = true;
+      this._keep(first);
       this._sampler = setInterval(() => this._look(), SAMPLE_MS);
     },
 
     /* the cheap half runs every tick; the expensive half only when the
        picture actually moved */
-    _look() {
+    _look(force) {
       if (!this._sampling || !this._shots.length) return;
-      const sig = SCREEN.peek();
       const last = this._shots[this._shots.length - 1];
+      const app = window.currentAppName || '';
+
+      /* Opening an app is not a guess. The phone is a small frame inside
+         whatever is being shared, so the surest signal that the screen
+         changed is the simulator saying it changed — no threshold can beat
+         knowing. Wait out the zoom first, or the frame is a blur. */
+      if (app !== last.app) {
+        if (!this._navAt) this._navAt = Date.now();
+        if (!force && Date.now() - this._navAt < NAV_SETTLE) return;
+        this._navAt = 0;
+        const shot = SCREEN.grab();
+        if (shot) this._keep(shot);
+        return;
+      }
+      this._navAt = 0;
+
+      const sig = SCREEN.peek();
       if (!sig || SCREEN.diff(sig, last.sig) < CHANGE) return;
       const shot = SCREEN.grab();
       if (shot) this._keep(shot);
@@ -346,6 +363,7 @@
        the question between them, and the newest must never be the one
        dropped because it is usually the one being asked about. */
     _keep(shot) {
+      shot.app = window.currentAppName || '';
       this._shots.push(shot);
       while (this._shots.length > Math.max(1, cfg.maxShots)) this._shots.splice(1, 1);
     },
@@ -380,7 +398,7 @@
 
       if (this._sampling) {
         await new Promise((r) => setTimeout(r, TAIL_MS));
-        this._look();                          // one last look before we stop
+        this._look(true);                      // one last look before we stop
       }
       this._stopSampling();
 

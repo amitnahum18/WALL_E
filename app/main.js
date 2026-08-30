@@ -269,6 +269,11 @@ window.addEventListener('load', () => {
   window.sim && sim.setStatusBar('light');
 });
 
+/* Named from the start, not only once something has been opened: the frame
+   sampler treats a change of this as "the screen definitely moved", and an
+   undefined that turns into "Home Screen" is not a move. */
+window.currentAppName = 'Home Screen';
+
 /* open an app from outside the springboard — the listening pill uses this */
 window.openAppByName = (name) => {
   const app = [].concat(...APP_PAGES, APP_DOCK)

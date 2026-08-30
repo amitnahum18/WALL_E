@@ -18,6 +18,7 @@
   const MAX_W = 1280;              // enough for a model to read UI text
   const QUALITY = 0.72;
   const SIG_W = 32, SIG_H = 20;    // the thumbnail that changes are judged on
+  const CELL = 22;                 // luma a cell must shift by to count as moved
 
   const SCREEN = {
     get supported() {
@@ -120,12 +121,22 @@
       return out;
     },
 
-    /* 0 = identical, 1 = nothing in common */
+    /* How much of the picture moved — not how far it moved on average.
+
+       The averaged version looked reasonable and did not work. What gets
+       shared is a whole screen or a whole browser window, and the phone is
+       a small frame somewhere inside it: switching apps changes every
+       pixel that matters and moves the mean by almost nothing, because
+       most of the frame is desktop that did not change. Counting cells
+       instead makes the measure independent of how much dead space is
+       around the part being looked at.
+
+       0 = nothing moved, 1 = all of it did. */
     diff(a, b) {
       if (!a || !b || a.length !== b.length) return 1;
-      let sum = 0;
-      for (let i = 0; i < a.length; i++) sum += Math.abs(a[i] - b[i]);
-      return sum / (a.length * 255);
+      let moved = 0;
+      for (let i = 0; i < a.length; i++) if (Math.abs(a[i] - b[i]) > CELL) moved++;
+      return moved / a.length;
     },
   };
 

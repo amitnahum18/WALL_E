@@ -137,9 +137,19 @@ frames a second across a ten second question is thirty images, which is thirty
 to forty thousand tokens to a vision model, and almost all of them are the same
 picture because a screen rarely moves while someone is talking to it. So the
 screen is *sampled* about three times a second — that part is only a canvas
-draw — and a frame is *kept* only when a 32×20 grayscale signature says the
-scene actually moved. A long question about a still screen costs one image; a
-question asked while scrolling costs a handful, capped under FRAMES PER COMMAND.
+draw — and a frame is *kept* only when the scene actually moved. A long question
+about a still screen costs one image; a question asked while scrolling costs a
+handful, capped under FRAMES PER COMMAND.
+
+Two things decide that a frame is worth keeping. The first is that the simulator
+says so: opening an app is not a guess, and a change of app is always worth an
+image, taken once the zoom has finished. The second is the pixels, for scrolling
+and everything else — measured as *how much of the picture moved* rather than
+how far it moved on average. The averaged version looked reasonable and did not
+work: what gets shared is a whole screen or a whole browser window, and the
+phone is a small frame somewhere inside it, so switching apps changed every
+pixel that mattered while barely moving the mean. Counting cells makes the
+measure independent of how much dead space surrounds the phone.
 
 A rolling video buffer is a small change on top of this if it ever earns its
 place.
