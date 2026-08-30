@@ -95,12 +95,16 @@
     e.on((ev) => {
       if (ev.type === 'heard') return;          // waiting stays a bare dot
 
+      /* Once "Thinking…" has gone up, something has to replace it. Falling
+         back to the bare dot would read as "nothing happened", which is the
+         one thing that is certainly untrue — a command was just sent. Every
+         outcome gets words, including the empty one. */
       if (ev.type === 'answered') {
         const entry = ev.entry || {};
-        if (entry.thinking) showAgent('Thinking…', 'thinking', 0);
+        if (entry.thinking) showAgent('Thinking…', 'thinking', 90000);
         else if (entry.answer) showAgent(entry.answer, 'answer', readingTime(entry.answer));
-        else if (entry.answerError) showAgent(entry.answerError, 'error', 6000);
-        else { agent = null; clearTimeout(agentTimer); paint(); }
+        else if (entry.answerError) showAgent(entry.answerError, 'error', 8000);
+        else showAgent('The agent had nothing to say.', 'error', 5000);
         return;
       }
 
