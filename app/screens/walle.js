@@ -34,6 +34,24 @@
     return d.toDateString() === now.toDateString() ? hm : d.toLocaleDateString('en-GB') + ' ' + hm;
   }
 
+  /* the frame that went with a command, full size */
+  function viewShot(nav, entry, shot) {
+    nav.push({
+      title: 'Screen', large: false,
+      build(body) {
+        const img = UI.el('img', 'walle-shot');
+        img.src = shot.dataUrl;
+        img.alt = 'the screen when this was said';
+        body.appendChild(img);
+        body.appendChild(UI.group([
+          UI.row({ label: 'Said', sub: entry.text, chevron: false }),
+          UI.row({ label: 'When', value: when(entry.at) }),
+          UI.row({ label: 'Size', value: shot.w + ' × ' + shot.h }),
+        ]));
+      },
+    });
+  }
+
   /* ---------- settings ---------- */
   function settings(nav) {
     nav.push({
@@ -219,6 +237,10 @@
           const metricsBox = UI.el('div');
           body.appendChild(metricsBox);
 
+          /* --- what was on screen when you spoke --- */
+          const screenBox = UI.el('div');
+          body.appendChild(screenBox);
+
           /* --- is the recogniser actually alive? --- */
           const listenerBox = UI.el('div');
           body.appendChild(listenerBox);
@@ -239,6 +261,41 @@
                        onTap: () => engine.markFalsePositive() }),
             ], { title: 'ACCURACY' }));
           };
+
+          /* The picker only opens from a real tap, so the switch itself has
+             to be what asks — not a later effect of a config change. */
+          const paintScreen = () => {
+            screenBox.innerHTML = '';
+            if (!SCREEN.supported) {
+              screenBox.appendChild(UI.group([
+                UI.row({ label: 'Screen capture', value: 'not available' }),
+              ], { title: 'SCREEN', note: 'This browser exposes no display capture API.' }));
+              return;
+            }
+
+            const sw = UI.switchEl(engine.config.captureScreen && SCREEN.active, async (on) => {
+              if (!on) {
+                SCREEN.disable();
+                engine.setConfig({ captureScreen: false });
+                paintScreen();
+                return;
+              }
+              const ok = await SCREEN.enable();
+              engine.setConfig({ captureScreen: ok });
+              paintScreen();
+            });
+
+            screenBox.appendChild(UI.group([
+              UI.row({ label: 'Capture on wake', sub: SCREEN.active ? SCREEN.label : 'not sharing', right: sw }),
+            ], {
+              title: 'SCREEN',
+              note: 'One frame is taken the moment the name is heard — before the screen reacts — ' +
+                    'and attached to that transcript. Frames are held in memory only, so they are ' +
+                    'gone when the page reloads.',
+            }));
+          };
+
+          SCREEN.onEnded(() => { engine.setConfig({ captureScreen: false }); paintScreen(); });
 
           /* "listening and doing nothing" and "stopped listening" look
              identical from outside. These numbers tell them apart.
@@ -309,12 +366,26 @@
                                           { title: 'TRANSCRIPTS' }));
               return;
             }
-            logBox.appendChild(UI.group(engine.log.map((e) => UI.row({
-              strong: true,
-              label: e.text,
-              sub: when(e.at) + '  ·  ' + (e.via === 'wake' ? 'wake word' : 'push to talk') +
-                   (e.sttMs ? '  ·  ' + e.sttMs + ' ms' : ''),
-            })), { title: 'TRANSCRIPTS', note: engine.log.length + ' transcripts, newest first' }));
+            logBox.appendChild(UI.group(engine.log.map((e) => {
+              const shot = e.id ? engine.getFrame(e.id) : null;
+              const thumb = shot ? (() => {
+                const img = UI.el('img', 'walle-thumb');
+                img.src = shot.dataUrl;
+                img.alt = 'screen when this was said';
+                return img;
+              })() : null;
+
+              return UI.row({
+                strong: true,
+                label: e.text,
+                sub: when(e.at) + '  ·  ' + (e.via === 'wake' ? 'wake word' : 'push to talk') +
+                     (e.sttMs ? '  ·  ' + e.sttMs + ' ms' : '') +
+                     (e.frame && !shot ? '  ·  frame expired' : ''),
+                right: thumb,
+                chevron: false,
+                onTap: shot ? () => viewShot(nav, e, shot) : null,
+              });
+            }), { title: 'TRANSCRIPTS', note: engine.log.length + ' transcripts, newest first' }));
           };
 
           const paintState = () => {
@@ -342,7 +413,7 @@
             heard.classList.toggle('on', !!showHeard);
           };
 
-          paintState(); paintMetrics(); buildListener(); paintListener(); paintLog();
+          paintState(); paintMetrics(); paintScreen(); buildListener(); paintListener(); paintLog();
 
           const off = engine.on((ev) => {
             if (ev.type === 'interim') { live.textContent = ev.text; return; }
@@ -355,6 +426,7 @@
             if (ev.type === 'metrics') { paintMetrics(); paintLog(); return; }
             paintState();
             if (ev.type === 'config') { paintMetrics(); buildListener(); paintListener(); }
+            if (ev.type === 'state' && engine.state === 'idle') paintScreen();
           });
 
           /* the counters only mean anything if they keep counting */

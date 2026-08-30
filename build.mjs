@@ -42,6 +42,7 @@ const appJs = [
   read('app', 'voice', 'stt.js'),
   read('app', 'voice', 'wake.js'),
   read('app', 'voice', 'phrase.js'),
+  read('app', 'voice', 'screen.js'),
   read('app', 'voice', 'engine.js'),
   read('app', 'voice', 'indicator.js'),
   read('app', 'screens', 'settings.js'),
@@ -179,7 +180,7 @@ ${read('simulator', 'bundle.css')}
         <i class="btn-vol-dn"></i><i class="btn-power"></i>
       </div>
       <div class="screen" id="screen">
-        <iframe id="frame" title="iPhone screen" allow="microphone"></iframe>
+        <iframe id="frame" title="iPhone screen" allow="microphone; display-capture"></iframe>
         <div class="chrome" id="chrome">
           <div class="cutout" id="cutout"></div>
           <div class="statusbar" id="statusbar">

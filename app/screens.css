@@ -675,3 +675,12 @@ html[data-theme="dark"] .so-screen{ --so-bg: #000000; }
 .listen-pill.is-dot{ padding: 5px; gap: 0; }
 .listen-pill.is-dot .listen-text{ display: none; }
 .listen-pill.is-dot .listen-dot{ width: 9px; height: 9px; animation-duration: 2.4s; }
+
+.walle-thumb{
+  width: 46px; height: 30px; border-radius: 5px; object-fit: cover;
+  border: .5px solid var(--ios-sep); background: var(--ios-fill); flex: none;
+}
+.walle-shot{
+  display: block; width: calc(100% - 32px); margin: 4px auto 14px;
+  border-radius: 12px; border: .5px solid var(--ios-sep);
+}

@@ -29,7 +29,10 @@
     silenceMs: 2000,                // end the command after this much quiet
     maxMs: 60000,                   // ceiling, not the normal way a turn ends
     beep: true,
+    captureScreen: false,           // grab what was on screen when the name landed
   };
+
+  const MAX_FRAMES = 12;            // frames are big; keep a short tail of them
 
   const cfg = Object.assign({}, DEFAULTS, UI.store('walle.cfg', {}));
 
@@ -41,6 +44,13 @@
     metrics: UI.store('walle.metrics', { detections: 0, falsePositives: 0, wakeMs: 0, sttMs: 0 }),
 
     heard: '',                  // what the phrase listener last made out
+
+    /* Frames live in memory only. A screenshot is far too big for
+       localStorage — a handful would blow the quota and take the
+       transcripts down with them — so the log records that a frame
+       existed and the pixels last only as long as the page does. */
+    frames: new Map(),
+    getFrame(id) { return this.frames.get(id) || null; },
     _armedFlag: false,
     /* true from the moment the wake word is armed until it is turned off —
        it stays true across a command turn, and across closing the app */
@@ -175,6 +185,7 @@
             this._wokeAt = performance.now();
             this.metrics.wakeMs = 0;               // no handoff: the turn is already running
             this.interim = '';
+            this._snap();                          // before the screen reacts
             this._emit({ type: 'wake' });
             if (cfg.beep) beep();
             this._set('listen');
@@ -225,6 +236,7 @@
       if (this.state !== 'wake') return;          // deaf while a command is running
       this.metrics.detections++;
       this._wokeAt = performance.now();
+      this._snap();                              // before the screen reacts
       this._emit({ type: 'wake' });
       if (cfg.beep) beep();
       this._listen('wake');
@@ -290,7 +302,25 @@
       if (PHRASE.capturing) PHRASE.finish();
     },
 
+    /* the screen as it was when the name was heard, not as it is now */
+    _snap() {
+      this._pendingFrame = null;
+      if (!cfg.captureScreen || !SCREEN.active) return;
+      this._pendingFrame = SCREEN.grab();
+    },
+
     _commit(entry) {
+      entry.id = entry.at + '-' + Math.random().toString(36).slice(2, 6);
+
+      if (this._pendingFrame) {
+        this.frames.set(entry.id, this._pendingFrame);
+        entry.frame = { w: this._pendingFrame.w, h: this._pendingFrame.h };
+        this._pendingFrame = null;
+        while (this.frames.size > MAX_FRAMES) {
+          this.frames.delete(this.frames.keys().next().value);
+        }
+      }
+
       this.log.unshift(entry);
       this.log = this.log.slice(0, 50);
       UI.save('walle.log', this.log);

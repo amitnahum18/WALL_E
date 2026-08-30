@@ -113,6 +113,25 @@ straight from that utterance, with no second turn.
 The language model `porcupine_params.pv` is pulled from jsDelivr automatically.
 Put a local copy in `app/voice/models/` and it will be preferred.
 
+### What was on the screen when you spoke
+
+Turning on SCREEN → **Capture on wake** opens a screen share once and holds it.
+From then on, a single frame is pulled the instant the name is heard — before
+the screen has reacted to anything — and attached to that transcript. Tap a
+transcript to see the frame it was said against.
+
+This is deliberately not a recording. An agent reading a command needs to see
+what you were looking at at that moment; a video of the seconds around it is
+the same information at a hundred times the size, in a form no model reads
+directly. One frame is what a vision model actually consumes, and it costs a
+canvas draw. A rolling video buffer is a small change on top of this if it ever
+earns its place.
+
+Frames are held in memory only and the log records that one existed. A
+screenshot is far too big for localStorage — a handful would blow the quota and
+take the transcripts down with it — so old frames read as "frame expired" after
+a reload.
+
 ### It keeps listening outside the app
 
 Arming the wake word arms the system, not the screen. Close WALL·E and it is
@@ -213,6 +232,7 @@ app/                  ★ this is where you write
     wake.js           the wake word by sound (Porcupine, on-device)
     phrase.js         the wake word by transcript (no key, always streaming)
     stt.js            speech to text (Web Speech)
+    screen.js         one frame of the screen, taken at the wake
     engine.js         the state machine and microphone ownership
     indicator.js      the listening pill, shown system-wide while armed
     models/           porcupine_params.pv, hi-walle.ppn
