@@ -205,6 +205,10 @@ Rules:
   you were given.
 - Never take a destructive or irreversible action without asking first.
 - Prefer a simple deterministic action over a delegation.
+- Device control is not connected yet: an action is recorded but nothing
+  happens and the screen does not move. So if what you need is not on the
+  screen, do not try to navigate to it — answer with what you can see and
+  say which screen the user would need to open.
 - Answer in one or two spoken sentences: the specific values first, then
   any detail worth adding. This is heard, not read.
 
@@ -286,12 +290,12 @@ def answer(state: WalleState) -> WalleState:
     text = decision.get("answer")
 
     if not text:
-        # reached by running out of iterations mid-loop: say what happened
-        # rather than returning nothing at all
-        result = state.get("action_result")
+        # Reached by running out of iterations mid-loop. This is spoken to
+        # someone waiting for an answer, so it says what they can do about
+        # it — the step count and the raw action belong in the log.
         text = (
-            f"I stopped after {state.get('iteration', 0)} steps. Last one: {result}"
-            if result else "I could not work out an answer."
+            "I could not work that out from what was on screen. "
+            "Try opening the app you mean and asking again."
         )
 
     return {"final_answer": text}
@@ -312,10 +316,22 @@ def execute_action(state: WalleState) -> WalleState:
     params = action.get("parameters") or {}
 
     known = {"open_app", "tap", "type", "swipe", "scroll", "back", "home"}
+    call = f"{name}({json.dumps(params, ensure_ascii=False)})"
+
+    # Worded as a refusal, not a receipt. "REQUESTED: open_app(Weather)"
+    # read like it had worked, so the model re-observed, found the same
+    # screen it had just tried to leave, and asked again until the loop
+    # ran out -- and the user got "I stopped after 5 steps" instead of an
+    # answer. The result has to say the screen did not move.
     if name in known:
-        result = f"REQUESTED: {name}({json.dumps(params, ensure_ascii=False)})"
+        result = (
+            f"NOT EXECUTED: {call}. Device control is not connected yet, so "
+            f"nothing happened and the screen has not changed. Do not ask for "
+            f"it again — answer from what you can already see, and say what "
+            f"the user would need to open themselves."
+        )
     else:
-        result = f"UNKNOWN ACTION: {name}"
+        result = f"NOT EXECUTED: {call} is not an action this device knows."
 
     return {
         "action_result": result,

@@ -100,11 +100,20 @@ wa.set_llm(stub)
 out = wa.run_walle(user_text="open maps", current_app="Home")
 
 check("loops back after acting", len(stub.calls), 2)
-check("action recorded", out["action_result"], 'REQUESTED: open_app({"app": "Maps"})')
+check("the action is named in the result",
+      'open_app({"app": "Maps"})' in out["action_result"], True)
 check("iterated once", out["iteration"], 1)
 check("final answer after the action", out["final_answer"], "Maps is open.")
 check("action result reached the second prompt",
-      "REQUESTED: open_app" in stub.calls[1][1]["content"][0]["text"], True)
+      "open_app" in stub.calls[1][1]["content"][0]["text"], True)
+
+# A receipt reads like success, and a model that believes it opened Maps
+# will re-observe, find the same screen, and ask again until the loop runs
+# out. Nothing is actually wired to a device, so the result has to say so.
+check("the result says nothing actually happened",
+      "NOT EXECUTED" in out["action_result"], True)
+check("and that the screen did not move",
+      "screen has not changed" in out["action_result"], True)
 
 
 # ------------------------------------------------------------
@@ -118,7 +127,11 @@ out = wa.run_walle(user_text="tap forever", max_iterations=3)
 
 check("stopped at the ceiling", out["iteration"], 3)
 check("still produced an answer", bool(out["final_answer"]), True)
-check("and said why", "stopped after" in out["final_answer"], True)
+# spoken to someone waiting for an answer: no step counts, no raw actions
+check("the giving-up answer is for a person",
+      "iteration" not in out["final_answer"] and "tap(" not in out["final_answer"], True)
+check("and tells them what to try",
+      "again" in out["final_answer"], True)
 
 
 # ------------------------------------------------------------
