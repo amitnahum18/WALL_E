@@ -684,3 +684,8 @@ html[data-theme="dark"] .so-screen{ --so-bg: #000000; }
   display: block; width: calc(100% - 32px); margin: 4px auto 14px;
   border-radius: 12px; border: .5px solid var(--ios-sep);
 }
+
+.walle-shot-cap{
+  text-align: center; font-size: 12px; color: var(--ios-label2);
+  margin: -8px 0 16px;
+}

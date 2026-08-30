@@ -116,16 +116,23 @@ Put a local copy in `app/voice/models/` and it will be preferred.
 ### What was on the screen when you spoke
 
 Turning on SCREEN → **Capture on wake** opens a screen share once and holds it.
-From then on, a single frame is pulled the instant the name is heard — before
-the screen has reacted to anything — and attached to that transcript. Tap a
-transcript to see the frame it was said against.
+A frame is pulled the instant the name is heard — before the screen has reacted
+to anything — and then again during the command, but only when the screen
+actually changes. Someone asking a long question may scroll to the thing they
+are asking about halfway through. Tap a transcript to see the frames it was
+said against.
 
-This is deliberately not a recording. An agent reading a command needs to see
-what you were looking at at that moment; a video of the seconds around it is
-the same information at a hundred times the size, in a form no model reads
-directly. One frame is what a vision model actually consumes, and it costs a
-canvas draw. A rolling video buffer is a small change on top of this if it ever
-earns its place.
+This is deliberately not a recording, and deliberately not a frame rate. Three
+frames a second across a ten second question is thirty images, which is thirty
+to forty thousand tokens to a vision model, and almost all of them are the same
+picture because a screen rarely moves while someone is talking to it. So the
+screen is *sampled* about three times a second — that part is only a canvas
+draw — and a frame is *kept* only when a 32×20 grayscale signature says the
+scene actually moved. A long question about a still screen costs one image; a
+question asked while scrolling costs a handful, capped under FRAMES PER COMMAND.
+
+A rolling video buffer is a small change on top of this if it ever earns its
+place.
 
 Frames are held in memory only and the log records that one existed. A
 screenshot is far too big for localStorage — a handful would blow the quota and

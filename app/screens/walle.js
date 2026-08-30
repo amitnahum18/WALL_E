@@ -34,19 +34,26 @@
     return d.toDateString() === now.toDateString() ? hm : d.toLocaleDateString('en-GB') + ' ' + hm;
   }
 
-  /* the frame that went with a command, full size */
-  function viewShot(nav, entry, shot) {
+  /* the frames that went with a command, in the order they were kept */
+  function viewShots(nav, entry, shots) {
     nav.push({
       title: 'Screen', large: false,
       build(body) {
-        const img = UI.el('img', 'walle-shot');
-        img.src = shot.dataUrl;
-        img.alt = 'the screen when this was said';
-        body.appendChild(img);
+        const t0 = shots[0].at;
+        shots.forEach((s, i) => {
+          const img = UI.el('img', 'walle-shot');
+          img.src = s.dataUrl;
+          img.alt = 'the screen while this was said';
+          body.appendChild(img);
+          const secs = ((s.at - t0) / 1000).toFixed(1);
+          body.appendChild(UI.el('div', 'walle-shot-cap',
+            i === 0 ? 'when the name was heard  ·  ' + s.w + ' × ' + s.h
+                    : 'the screen changed, +' + secs + 's'));
+        });
         body.appendChild(UI.group([
           UI.row({ label: 'Said', sub: entry.text, chevron: false }),
           UI.row({ label: 'When', value: when(entry.at) }),
-          UI.row({ label: 'Size', value: shot.w + ' × ' + shot.h }),
+          UI.row({ label: 'Frames kept', value: String(shots.length) }),
         ]));
       },
     });
@@ -289,9 +296,22 @@
               UI.row({ label: 'Capture on wake', sub: SCREEN.active ? SCREEN.label : 'not sharing', right: sw }),
             ], {
               title: 'SCREEN',
-              note: 'One frame is taken the moment the name is heard — before the screen reacts — ' +
-                    'and attached to that transcript. Frames are held in memory only, so they are ' +
-                    'gone when the page reloads.',
+              note: 'A frame is taken the moment the name is heard — before the screen reacts — ' +
+                    'and then again during the command only if the screen actually changes. ' +
+                    'Frames are held in memory only, so they are gone when the page reloads.',
+            }));
+
+            screenBox.appendChild(UI.group([1, 4, 8].map((n) => UI.row({
+              label: n === 1 ? 'Just the first frame' : 'Up to ' + n + ' frames',
+              value: engine.config.maxShots === n ? '✓' : '',
+              chevron: false,
+              onTap: () => { engine.setConfig({ maxShots: n }); paintScreen(); },
+            })), {
+              title: 'FRAMES PER COMMAND',
+              note: 'Sampled about three times a second, but a frame is only kept when the screen ' +
+                    'has changed — a long question about a still screen still costs one image. ' +
+                    'Every kept frame is roughly a thousand tokens to a vision model, which is why ' +
+                    'this is not simply a frame rate.',
             }));
           };
 
@@ -367,23 +387,25 @@
               return;
             }
             logBox.appendChild(UI.group(engine.log.map((e) => {
-              const shot = e.id ? engine.getFrame(e.id) : null;
-              const thumb = shot ? (() => {
+              const shots = e.id ? engine.getFrame(e.id) : null;
+              const thumb = shots && shots.length ? (() => {
                 const img = UI.el('img', 'walle-thumb');
-                img.src = shot.dataUrl;
+                img.src = shots[0].dataUrl;
                 img.alt = 'screen when this was said';
                 return img;
               })() : null;
 
+              const gone = (e.shots || e.frame) && !thumb;
               return UI.row({
                 strong: true,
                 label: e.text,
                 sub: when(e.at) + '  ·  ' + (e.via === 'wake' ? 'wake word' : 'push to talk') +
                      (e.sttMs ? '  ·  ' + e.sttMs + ' ms' : '') +
-                     (e.frame && !shot ? '  ·  frame expired' : ''),
+                     (shots && shots.length > 1 ? '  ·  ' + shots.length + ' frames' : '') +
+                     (gone ? '  ·  frames expired' : ''),
                 right: thumb,
                 chevron: false,
-                onTap: shot ? () => viewShot(nav, e, shot) : null,
+                onTap: thumb ? () => viewShots(nav, e, shots) : null,
               });
             }), { title: 'TRANSCRIPTS', note: engine.log.length + ' transcripts, newest first' }));
           };

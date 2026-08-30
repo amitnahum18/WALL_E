@@ -30,9 +30,12 @@
     maxMs: 60000,                   // ceiling, not the normal way a turn ends
     beep: true,
     captureScreen: false,           // grab what was on screen when the name landed
+    maxShots: 4,                    // per command, kept only when the screen changes
   };
 
-  const MAX_FRAMES = 12;            // frames are big; keep a short tail of them
+  const MAX_ENTRIES = 8;            // entries whose frames are still held
+  const SAMPLE_MS = 320;            // ~3 looks a second, cheap; keeping is what costs
+  const CHANGE = 0.045;             // signature distance that counts as a new scene
 
   const cfg = Object.assign({}, DEFAULTS, UI.store('walle.cfg', {}));
 
@@ -220,6 +223,8 @@
     async stop() {
       const gen = ++this._gen;
       this._armedFlag = false;
+      this._stopSampling();
+      this._shots = [];
       if (this._stt) { this._stt.abort(); this._stt = null; }
       PHRASE.release();
       await WAKE.release();
@@ -302,21 +307,46 @@
       if (PHRASE.capturing) PHRASE.finish();
     },
 
-    /* the screen as it was when the name was heard, not as it is now */
+    /* The screen as it was when the name was heard — and then, while the
+       command is still being spoken, again whenever it stops looking like
+       that. Someone asking a long question may scroll to the thing they
+       are asking about halfway through. */
     _snap() {
-      this._pendingFrame = null;
+      this._shots = [];
+      clearInterval(this._sampler);
+      this._sampler = null;
       if (!cfg.captureScreen || !SCREEN.active) return;
-      this._pendingFrame = SCREEN.grab();
+
+      const first = SCREEN.grab();
+      if (!first) return;
+      this._shots.push(first);
+
+      this._sampler = setInterval(() => {
+        if (this.state !== 'listen' || this._shots.length >= cfg.maxShots) return;
+        /* the cheap half runs every tick; the expensive half almost never */
+        const sig = SCREEN.peek();
+        const last = this._shots[this._shots.length - 1];
+        if (!sig || SCREEN.diff(sig, last.sig) < CHANGE) return;
+        const shot = SCREEN.grab();
+        if (shot) this._shots.push(shot);
+      }, SAMPLE_MS);
+    },
+
+    _stopSampling() {
+      clearInterval(this._sampler);
+      this._sampler = null;
     },
 
     _commit(entry) {
       entry.id = entry.at + '-' + Math.random().toString(36).slice(2, 6);
 
-      if (this._pendingFrame) {
-        this.frames.set(entry.id, this._pendingFrame);
-        entry.frame = { w: this._pendingFrame.w, h: this._pendingFrame.h };
-        this._pendingFrame = null;
-        while (this.frames.size > MAX_FRAMES) {
+      this._stopSampling();
+      const shots = this._shots || [];
+      this._shots = [];
+      if (shots.length) {
+        this.frames.set(entry.id, shots);
+        entry.shots = shots.length;
+        while (this.frames.size > MAX_ENTRIES) {
           this.frames.delete(this.frames.keys().next().value);
         }
       }

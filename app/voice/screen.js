@@ -1,21 +1,23 @@
 /* ===========================================================
-   screen.js — what was on the screen when you spoke.
+   screen.js — what was on the screen while you spoke.
 
-   Deliberately not a recording. An agent reading a command needs to see
-   what you were looking at at that instant, and a video of the seconds
-   around it is the same information at a hundred times the size, in a
-   form no model reads directly. So the share is opened once and held
-   open, and a single frame is pulled from it the moment the wake word
-   lands — which is also the moment before the screen changes in response
-   to whatever happens next.
+   Deliberately not a recording, and deliberately not a fixed frame rate.
+   Three frames a second across a ten second question is thirty images;
+   for a vision model that is thirty to forty thousand tokens, and almost
+   all of them are the same picture, because a screen rarely moves while
+   someone is talking to it. Sampling often is cheap — it is a canvas
+   draw — but *keeping* a frame is expensive, so frames are kept only
+   when the screen actually changed.
 
-   The stream is a live handle: grabbing costs a canvas draw, so it is
-   cheap enough to do on every detection and nothing is stored unless a
-   command actually comes of it.
+   Change is measured on a 32x20 grayscale signature taken from the same
+   draw: a scene cut moves it a lot, a blinking cursor moves it by
+   nothing. The first frame is always kept, because what you were looking
+   at when you started talking is the one that is always relevant.
    =========================================================== */
 (() => {
   const MAX_W = 1280;              // enough for a model to read UI text
   const QUALITY = 0.72;
+  const SIG_W = 32, SIG_H = 20;    // the thumbnail that changes are judged on
 
   const SCREEN = {
     get supported() {
@@ -91,10 +93,39 @@
 
       try {
         c.getContext('2d').drawImage(v, 0, 0, w, h);
-        return { dataUrl: c.toDataURL('image/jpeg', QUALITY), w, h, at: Date.now() };
+        return { dataUrl: c.toDataURL('image/jpeg', QUALITY), w, h, at: Date.now(), sig: this._sig(v) };
       } catch (e) {
         return null;
       }
+    },
+
+    /* Just the signature, without paying for a JPEG. This is what the
+       sampling loop calls several times a second. */
+    peek() {
+      const v = this._video;
+      if (!this._stream || !v || !v.videoWidth) return null;
+      try { return this._sig(v); } catch (e) { return null; }
+    },
+
+    _sig(v) {
+      const c = this._sigCanvas || (this._sigCanvas = document.createElement('canvas'));
+      c.width = SIG_W; c.height = SIG_H;
+      const ctx = c.getContext('2d', { willReadFrequently: true });
+      ctx.drawImage(v, 0, 0, SIG_W, SIG_H);
+      const px = ctx.getImageData(0, 0, SIG_W, SIG_H).data;
+      const out = new Uint8Array(SIG_W * SIG_H);
+      for (let i = 0, j = 0; i < px.length; i += 4, j++) {
+        out[j] = (px[i] * 77 + px[i + 1] * 150 + px[i + 2] * 29) >> 8;   // luma
+      }
+      return out;
+    },
+
+    /* 0 = identical, 1 = nothing in common */
+    diff(a, b) {
+      if (!a || !b || a.length !== b.length) return 1;
+      let sum = 0;
+      for (let i = 0; i < a.length; i++) sum += Math.abs(a[i] - b[i]);
+      return sum / (a.length * 255);
     },
   };
 
